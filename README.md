@@ -14,8 +14,13 @@ branch to what it builds on, or ask how the idea came to be.
 - **Prompt to PDF explainer.** "explain why a hash map is O(1)" becomes a
   1 to 3 page LaTeX document (compiled with tectonic, auto-fixed if it doesn't
   compile) filed under a topic.
-- **Chat about any file.** Press `c` on an explainer, a PDF, or a code file to
-  open a side chat with that file pinned. It resumes where you left off.
+- **Chat beside the PDF.** Press `c` while reading to open a chat panel next
+  to the file: PDF on the left, chat on the right, on the same page. The file
+  is pinned as context and its last chat resumes. The page you're on and any
+  text you select in the PDF go with each question. Drag the divider to resize;
+  `c` or the edge tab collapses it, and the width and open state are
+  remembered. On a phone it's a bottom sheet. `esc` in the box takes you back to
+  the page. Works for PDFs and code/text files.
 - **One AI command box** (`:` or `/`) for the file side, in plain English:
   make, rename, or delete folders, move or rename files, retag topics, open
   or find files, and write a new explainer into a folder. The model can only
@@ -53,7 +58,7 @@ branch to what it builds on, or ask how the idea came to be.
 | `h` / `←` | tree: fold, or go up a folder · viewer: `h` is a history lesson, `←`/`tab` go back to the tree |
 | `n` `p` · `g` `G` · `+` `-` `0` | page · first/last · zoom |
 | `i` · `s` · `d` | invert PDF · view LaTeX source · download |
-| `c` | chat about the open file |
+| `c` | open / collapse the chat beside the file |
 | `:` or `/` | command box (`y` confirm, `n` cancel, `u` undo, `1`-`9` open a result) |
 | `a` | learn: type what you're stuck on |
 | `b` | back up from a prerequisite explainer |

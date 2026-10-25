@@ -473,3 +473,115 @@ ul.explainers li.waiting .t { color: var(--muted); font-style: italic; }
   border-radius: 2px; color: var(--yellow, #e0af68); font-size: 0.78em; line-height: 1.3; vertical-align: 0.05em;
 }
 .pane-action .exp-tag { margin-left: 0.5ch; }
+
+/* ---- side chat next to the viewer (web/sidechat.js) ---- */
+
+.view-split { position: relative; display: flex; flex: 1; min-height: 0; min-width: 0; }
+.view-split > .viewer { min-width: 0; }
+.sidechat {
+  width: var(--sc-w, 420px); flex: none; min-height: 0;
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--border);
+}
+.sidechat[hidden], .sc-divider[hidden], .sc-handle[hidden] { display: none; }
+.sc-divider {
+  flex: none; width: 7px; margin-right: -4px; z-index: 2;
+  cursor: col-resize; touch-action: none; outline: none;
+  background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat;
+  background-size: 0 100%;
+}
+.sc-divider:hover, .sc-divider:focus-visible, body.sc-dragging .sc-divider { background: linear-gradient(var(--accent), var(--accent)) center / 3px 100% no-repeat; }
+body.sc-dragging { cursor: col-resize; user-select: none; }
+body.sc-dragging .viewer { pointer-events: none; }
+.sc-handle {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2;
+  writing-mode: vertical-rl; padding: 1.2ch 0.25em;
+  background: var(--bg); color: var(--muted); cursor: pointer;
+  border: 1px solid var(--border); border-right: 0; border-radius: 2px 0 0 2px;
+}
+.sc-handle b { color: var(--accent); font-weight: 400; }
+.sc-handle:hover { color: var(--fg); border-color: var(--accent); }
+.sc-head { display: flex; align-items: center; gap: 1ch; padding: 0.7em 1ch 0.3em; border-bottom: 1px solid var(--border); }
+.sc-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.sidechat .quiet { background: none; border: 0; padding: 0 0.5ch; color: var(--muted); cursor: pointer; }
+.sidechat .quiet:hover { color: var(--accent); }
+.sc-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0.7em 1ch; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.sc-empty { color: var(--muted); margin: 0; }
+.sidechat .messages { display: flex; flex-direction: column; gap: 0.9em; }
+.sidechat .message { min-width: 0; }
+.sidechat .message.user .plain-message { margin: 0; white-space: pre-wrap; }
+.sidechat .message.user .plain-message::before { content: "> "; color: var(--accent); }
+.sc-msg-where { color: var(--muted); font-size: 12px; margin-bottom: 0.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidechat .message-actions { display: flex; gap: 1ch; margin-top: 0.2em; }
+.sidechat .message-stopped { color: var(--red); font-size: 12px; margin: 0.3em 0 0; }
+.sidechat .streaming::after { content: "▊"; color: var(--accent); animation: sc-blink 1s steps(2) infinite; }
+@keyframes sc-blink { 50% { opacity: 0; } }
+.sidechat .message-body { overflow-wrap: anywhere; }
+.sidechat .message-body > :first-child { margin-top: 0; }
+.sidechat .message-body > :last-child { margin-bottom: 0; }
+.sidechat .message-body p { margin: 0.45em 0; }
+.sidechat .message-body h1, .sidechat .message-body h2, .sidechat .message-body h3 { color: var(--accent); font-size: inherit; margin: 0.7em 0 0.3em; }
+.sidechat .message-body h4, .sidechat .message-body h5, .sidechat .message-body h6 { font-size: inherit; }
+.sidechat .message-body a { color: var(--accent); }
+.sidechat .message-body code { background: var(--sel); border-radius: 2px; padding: 0 0.4ch; font: inherit; font-size: 13px; }
+.sidechat .message-body pre code { background: none; padding: 0; }
+.sidechat .code-block { border: 1px solid var(--border); border-radius: 2px; margin: 0.5em 0; overflow: hidden; }
+.sidechat .code-header { display: flex; justify-content: space-between; gap: 1ch; padding: 0.1em 1ch; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.sidechat .code-header button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; }
+.sidechat .code-block pre { margin: 0; padding: 0.5em 1ch; overflow-x: auto; font: 13px/1.5 var(--mono); scrollbar-width: thin; }
+.sidechat .message-body blockquote { margin: 0.5em 0; padding: 0.1em 1ch; border-left: 2px solid var(--accent); color: var(--muted); }
+.sidechat .message-body ul, .sidechat .message-body ol { padding-left: 2.5ch; margin: 0.4em 0; }
+.sidechat .table-wrap { overflow-x: auto; }
+.sidechat .message-body table { border-collapse: collapse; margin: 0.5em 0; }
+.sidechat .message-body th, .sidechat .message-body td { border: 1px solid var(--border); padding: 0.2em 1ch; text-align: left; }
+.sidechat .message-body .math.display { overflow-x: auto; padding: 0.2em 0; }
+.sidechat .math-pending { color: var(--muted); }
+.sc-form, .sc-gate { border-top: 1px solid var(--border); padding: 0.5em 1ch 0.4em; display: flex; flex-direction: column; gap: 0.35em; }
+.sc-form[hidden], .sc-gate[hidden], .sc-where[hidden] { display: none; }
+.sc-gate label { color: var(--muted); }
+.sc-gate input, .sc-form textarea {
+  font: inherit; color: var(--fg); background: var(--field);
+  border: 1px solid var(--border); border-radius: 2px; padding: 0.35em 1ch;
+}
+.sc-form textarea { resize: none; min-height: 2.9em; max-height: 180px; }
+.sc-gate input:focus, .sc-form textarea:focus { outline: none; border-color: var(--accent); }
+.sc-where { display: flex; flex-wrap: wrap; gap: 0.2em 1.5ch; color: var(--muted); font-size: 12px; }
+.sc-where .sc-sel { color: var(--fg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.sc-where .sc-sel .quiet { font-size: 12px; }
+.sc-row { display: flex; align-items: center; gap: 1ch; }
+.sc-status { flex: 1; min-width: 0; color: var(--muted); font-size: 12px; margin: 0; overflow: hidden; text-overflow: ellipsis; }
+.sc-status.error { color: var(--red); }
+.sidechat .sc-btn { position: static; }
+.sidechat .sc-btn:disabled { opacity: 0.45; cursor: default; }
+.sc-gate .sc-btn { align-self: flex-start; }
+
+/* selectable PDF text (pdf.js text layer, transparent over the canvas) */
+.page .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; transform-origin: 0 0; z-index: 1; -webkit-text-size-adjust: none; text-size-adjust: none; }
+.page .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.page .textLayer { --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.page .textLayer > :not(.markedContent), .page .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.page .textLayer .markedContent { display: contents; }
+.page .textLayer span[role="img"] { user-select: none; cursor: default; }
+.page .textLayer ::selection { background: rgb(244 102 35 / 0.35); color: transparent; }
+.page .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+.page .textLayer.selecting .endOfContent { top: 0; }
+.page .links { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.page .links a { pointer-events: auto; }
+
+/* narrow screens: the chat is a bottom sheet over the file */
+@media (max-width: 760px) {
+  .sidechat {
+    position: fixed; left: 0; right: 0; bottom: 2em; z-index: 5;
+    width: auto; height: min(60dvh, 34em);
+    background: var(--bg); border-left: 0; border-top: 1px solid var(--accent);
+    box-shadow: 0 -6px 18px rgb(0 0 0 / 0.35);
+  }
+  .sc-divider { display: none !important; }
+  .sc-handle { top: auto; bottom: 0.6em; transform: none; writing-mode: horizontal-tb; padding: 0.15em 1ch; border-right: 1px solid var(--border); border-radius: 2px; right: 0.6ch; }
+}
+:root[data-theme="light"] .sidechat .sc-handle, :root[data-theme="light"] .sc-handle { background: var(--bg); }
+:root[data-theme="light"] .page .textLayer ::selection { background: rgb(194 65 12 / 0.28); }
+@media (max-width: 760px) { :root[data-theme="light"] .sidechat { box-shadow: 0 -4px 14px rgb(0 0 0 / 0.12); } }

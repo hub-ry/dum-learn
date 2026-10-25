@@ -185,7 +185,9 @@ async function historyLesson(rel, stuck) {
 }
 function chatAbout(l) {
   if (!l?.path || l.status !== "ready") return;
-  location.href = `/explore/?file=${encodeURIComponent(l.path)}`;
+  // Open it in the viewer with the side chat beside it (web/sidechat.js).
+  const [tab, ...rest] = l.path.split("/");
+  window.learnApp?.openPath(tab, rest.join("/")).then(() => window.learnSide?.open());
 }
 async function writeWaiting(l) {
   try { const { lesson } = await api("POST", `/api/lessons/${l.id}/write`); await track(lesson); }

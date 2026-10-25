@@ -12,6 +12,7 @@
 <script type="module" src="/app.js"></script>
 <script type="module" src="/study.js"></script>
 <script type="module" src="/command.js"></script>
+<script type="module" src="/sidechat.js"></script>
 </head>
 <body>
 <header class="bar top">
@@ -35,11 +36,38 @@
     <h2 class="pane-title" id="view-title">no file open</h2>
     <div class="pane-actions">
       <button id="hist-btn" class="pane-action" type="button" hidden title="Still don't get it? A short history of the problem this idea solved (h, experimental)"><b>h</b> history <span class="exp-tag">experimental</span></button>
-      <button id="chat-btn" class="pane-action" type="button" hidden title="Chat about this file (c)"><b>c</b> chat about this</button>
+      <button id="chat-btn" class="pane-action" type="button" hidden aria-controls="sidechat" aria-expanded="false" title="Chat about this file as you read (c)"><b>c</b> <span class="lbl">chat</span></button>
     </div>
     <div id="branch-bar" class="branch-bar" hidden></div>
-    <div id="viewer" class="viewer" tabindex="-1">
-      <p class="empty">Pick a file on the left (or press <kbd>j</kbd>/<kbd>k</kbd> and <kbd>enter</kbd>).</p>
+    <div id="view-split" class="view-split">
+      <div id="viewer" class="viewer" tabindex="-1">
+        <p class="empty">Pick a file on the left (or press <kbd>j</kbd>/<kbd>k</kbd> and <kbd>enter</kbd>).</p>
+      </div>
+      <button id="sc-handle" class="sc-handle" type="button" hidden aria-controls="sidechat" title="Open the chat (c)"><b>c</b> chat</button>
+      <div id="sc-divider" class="sc-divider" role="separator" aria-orientation="vertical" aria-label="Resize chat (left/right arrows)" tabindex="0" hidden></div>
+      <aside id="sidechat" class="sidechat" aria-label="Chat about this file" hidden>
+        <header class="sc-head">
+          <span class="sc-title" id="sc-title">chat</span>
+          <button id="sc-new" class="quiet" type="button" hidden title="Start a fresh chat about this file">new</button>
+          <button id="sc-close" class="quiet" type="button" title="Collapse (c)" aria-label="Collapse chat">&rsaquo;&rsaquo;</button>
+        </header>
+        <div id="sc-scroll" class="sc-scroll"><div id="sc-msgs" class="messages"></div></div>
+        <form id="sc-login" class="sc-gate" hidden>
+          <label for="sc-pass">passcode to chat</label>
+          <input id="sc-pass" type="password" autocomplete="current-password" required>
+          <button type="submit" class="pane-action sc-btn">unlock</button>
+          <p id="sc-gate-msg" class="sc-status error" role="status"></p>
+        </form>
+        <form id="sc-form" class="sc-form" hidden>
+          <div id="sc-where" class="sc-where" hidden></div>
+          <textarea id="sc-input" rows="2" placeholder="ask about this file…  (enter sends, esc back to the page)" aria-label="Ask about this file"></textarea>
+          <div class="sc-row">
+            <span id="sc-status" class="sc-status" role="status"></span>
+            <button id="sc-stop" class="pane-action sc-btn" type="button" hidden>stop</button>
+            <button id="sc-send" class="pane-action sc-btn" type="submit">send</button>
+          </div>
+        </form>
+      </aside>
     </div>
   </section>
 </main>
@@ -73,7 +101,7 @@
       <tr><td><kbd>i</kbd></td><td>invert PDF colors (dark pages)</td></tr>
       <tr><td><kbd>s</kbd></td><td>view the LaTeX source of a PDF</td></tr>
       <tr><td><kbd>d</kbd></td><td>download the open file</td></tr>
-      <tr><td><kbd>c</kbd></td><td>chat about the open file (resumes its last chat)</td></tr>
+      <tr><td><kbd>c</kbd></td><td>open / collapse the chat beside the file (its last chat resumes; the page and any selected text go with each question; <kbd>esc</kbd> in the box returns to the page)</td></tr>
       <tr><td><kbd>x</kbd></td><td>chat (passcode)</td></tr>
       <tr><td><kbd>T</kbd></td><td>light / dark theme</td></tr>
       <tr><td><kbd>?</kbd> <kbd>esc</kbd></td><td>show / hide this help</td></tr>

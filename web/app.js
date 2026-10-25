@@ -167,10 +167,10 @@ function renderChrome() {
   const hint = (k, label) => `<b>${k}</b> ${label}`;
   const hints = state.focus === "list"
     ? [hint("j/k", "move"), hint("enter", "open"), hint("1-9", "tab"), hint("?", "help")]
-    : [hint("j/k", "scroll"), hint("n/p", "page"), hint("+/-", "zoom"), ...(document.documentElement.dataset.theme === "light" ? [] : [hint("i", "invert")]), ...(document.body.classList.contains("has-study") ? [hint("c", "chat"), hint("h", "history"), hint("tab", "list")] : [hint("h", "list")]), hint("?", "help")];
+    : [hint("j/k", "scroll"), hint("n/p", "page"), hint("+/-", "zoom"), ...(document.documentElement.dataset.theme === "light" ? [] : [hint("i", "invert")]), ...(document.body.classList.contains("has-study") ? [hint("c", window.learnSide?.isOpen() ? "hide chat" : "chat"), hint("h", "history"), hint("tab", "list")] : [hint("h", "list")]), hint("?", "help")];
   els.hints.innerHTML = hints.join("  ");
-  const chatBtn = $("chat-btn");
-  if (chatBtn) chatBtn.hidden = !(document.body.classList.contains("has-study") && openKey());
+  // The side chat (web/sidechat.js) follows the page you're on.
+  document.dispatchEvent(new CustomEvent("learn:page"));
   const histBtn = $("hist-btn");
   if (histBtn) histBtn.hidden = !(document.body.classList.contains("has-study") && openKey());
   renderBranchBar();
@@ -269,6 +269,7 @@ function openItem(item, { fromHash = false } = {}) {
   if (matchMedia("(max-width: 760px)").matches) document.body.classList.add("list-collapsed");
   renderList();
   showItem();
+  document.dispatchEvent(new CustomEvent("learn:open"));
 }
 
 function applyHash() {
@@ -509,7 +510,22 @@ async function renderPage(p) {
   }
   p.canvas.replaceWith(canvas);
   p.canvas = canvas;
+  renderText(p, p.proxy.getViewport({ scale })).catch((err) => console.error("text:", err));
   renderLinks(p, p.proxy.getViewport({ scale })).catch((err) => console.error("links:", err));
+}
+
+// Transparent pdf.js text layer over the canvas, so text can be selected
+// (and sent to the side chat as "I selected this").
+async function renderText(p, viewport) {
+  const div = document.createElement("div");
+  div.className = "textLayer";
+  p.el.style.setProperty("--total-scale-factor", String(viewport.scale));
+  p.el.style.setProperty("--scale-round-x", "1px");
+  p.el.style.setProperty("--scale-round-y", "1px");
+  const layer = new pdfjs.TextLayer({ textContentSource: p.proxy.streamTextContent(), container: div, viewport });
+  await layer.render();
+  p.el.querySelector(".textLayer")?.remove();
+  p.links.before(div);
 }
 
 async function renderLinks(p, viewport) {
@@ -632,7 +648,7 @@ document.addEventListener("keydown", (e) => {
   // in a text field is never a shortcut.
   if (document.body.classList.contains("studying") || e.target.closest?.("input, textarea, select")) return;
   if (e.key === "x") { e.preventDefault(); location.href = "/explore/"; return; }
-  if (e.key === "c" && openKey()) { e.preventDefault(); location.href = `/explore/?file=${encodeURIComponent(openKey())}`; return; }
+  if (e.key === "c" && window.learnSide && document.body.classList.contains("has-study")) { e.preventDefault(); window.learnSide.toggle(); return; }
   if (e.key === "b" && openKey()) {
     const info = window.learnStudy?.lessonAt?.(openKey());
     if (info?.parent) { e.preventDefault(); window.learnStudy.backUp(info.lesson); return; }
@@ -701,7 +717,6 @@ document.addEventListener("keydown", (e) => {
 
 $("help-btn").addEventListener("click", () => toggleHelp(true));
 $("hist-btn")?.addEventListener("click", () => openKey() && window.learnStudy?.history?.(openKey()));
-$("chat-btn")?.addEventListener("click", () => { if (openKey()) location.href = `/explore/?file=${encodeURIComponent(openKey())}`; });
 document.addEventListener("learn:theme", () => renderChrome());
 els.help.addEventListener("click", (e) => { if (e.target === els.help) toggleHelp(false); });
 $("toggle-list").addEventListener("click", () => document.body.classList.toggle("list-collapsed"));
@@ -728,7 +743,7 @@ async function loadManifest() {
   state.tabs = (await res.json()).tabs;
 }
 // "<tab>/<path>" of the open file, used for time tracking (web/time.js) and
-// for "c: ask about this" (pins the file in a new /explore/ chat).
+// for the side chat (web/sidechat.js), which pins the file as context.
 const openKey = () => (state.open && state.openTab ? `${state.openTab}/${state.open.path}` : null);
 window.learnTimeKey = () => (!document.body.classList.contains("studying") && openKey() ? `file:${openKey()}` : null);
 
@@ -775,8 +790,11 @@ window.learnApp = {
       }
     }
     renderTabs(); renderList(); renderChrome();
+    document.dispatchEvent(new CustomEvent("learn:open"));
   },
   openKey: () => openKey(),
+  pageInfo: () => (state.open?.kind === "pdf" && !state.showSource && state.pages.length ? { page: state.page, pages: state.pages.length } : null),
+  focusView: () => { setFocus("view"); els.viewer.focus({ preventScroll: true }); },
   inStudy: () => document.body.classList.contains("studying"),
 };
 

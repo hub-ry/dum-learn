@@ -106,7 +106,13 @@ async function apply(r) {
     window.learnStudy?.refresh?.();
   }
   if (r.open) { close(); window.learnApp?.openPath(r.open.tab, r.open.path); }
-  else if (r.chat) { location.href = `/explore/?file=${encodeURIComponent(r.chat.file)}${r.chat.question ? `&q=${encodeURIComponent(r.chat.question)}` : ""}`; }
+  else if (r.chat) {
+    // "ask the mutex notes why ...": open the file with the side chat beside it.
+    close();
+    const [tab, ...rest] = r.chat.file.split("/");
+    await window.learnApp?.openPath(tab, rest.join("/"));
+    window.learnSide?.ask(r.chat.question);
+  }
   else if (r.branch) { window.learnStudy?.ask(r.branch); }
   else if (r.lesson) { window.learnStudy?.track(r.lesson); }
 }

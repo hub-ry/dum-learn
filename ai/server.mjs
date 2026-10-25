@@ -64,6 +64,7 @@ const CHATS_FILE = path.join(DATA, "chats.json");
 const CHAT_HISTORY_TOKENS = 6000;
 const CHAT_CONTEXT_CHARS = 14000;
 const CHAT_MESSAGE_CHARS = 8000;
+const CHAT_SELECTION_CHARS = 1500;
 const CHAT_TITLE_CHARS = 200;
 const CHAT_REPLY_TOKENS = 1600;
 const C = (() => {
@@ -953,7 +954,25 @@ function trimHistory(messages) {
     start--;
   }
   while (start < convo.length && convo[start].role !== "user") start++;
-  return { history: convo.slice(start).map(({ role, content }) => ({ role, content })), trimmed: start };
+  return { history: convo.slice(start).map(({ role, content, where }) => ({ role, content: role === "user" && where ? content + whereNote(where) : content })), trimmed: start };
+}
+
+// Where the reader was when they asked (side chat next to the PDF): page and
+// any text they had selected. Sent to the model with that message only.
+function whereValue(w) {
+  if (!w || typeof w !== "object") return null;
+  const out = {};
+  const int = (v, max) => (Number.isInteger(v) && v >= 1 && v <= max ? v : null);
+  if (int(w.pages, 999)) out.pages = w.pages;
+  if (int(w.page, out.pages ?? 999)) out.page = w.page;
+  if (typeof w.selection === "string" && w.selection.trim()) out.selection = clip(w.selection.replace(/\s+/g, " ").trim(), CHAT_SELECTION_CHARS);
+  return Object.keys(out).length ? out : null;
+}
+function whereNote(w) {
+  const bits = [];
+  if (w.page) bits.push(`I'm reading page ${w.page}${w.pages ? ` of ${w.pages}` : ""} of the document.`);
+  if (w.selection) bits.push(`I selected this text: "${w.selection}"`);
+  return bits.length ? `\n\n[${bits.join(" ")}]` : "";
 }
 
 function chatSummary(c) {
@@ -1069,7 +1088,8 @@ route("POST", "/api/chats/([\\w-]+)/messages", async (req, res, sess, [cid]) => 
   };
   let ping;
   try {
-    const um = { id: id(4), role: "user", content: b.content.trim(), at: now() };
+    const where = whereValue(b.where);
+    const um = { id: id(4), role: "user", content: b.content.trim(), at: now(), ...(where ? { where } : {}) };
     c.messages.push(um);
     if (c.title === "new chat" || c.title === "New chat") c.title = clip(um.content.replace(/\s+/g, " "), 70);
     c.updated = now();
