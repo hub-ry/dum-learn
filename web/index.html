@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>learn</title>
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/time.js"></script>
+<script type="module" src="/app.js"></script>
+<script type="module" src="/study.js"></script>
+<script type="module" src="/command.js"></script>
+</head>
+<body>
+<header class="bar top">
+  <span class="brand">learn</span>
+  <button id="study-btn" class="tab study-tab" type="button" aria-selected="false" hidden><span class="num">a:</span>learn</button>
+  <a id="explore-link" class="tab explore-tab" href="/explore/" title="Chat (DeepSeek)"><span class="num">x:</span>chat</a>
+  <nav id="tabs" class="tabs" aria-label="Tabs"></nav>
+  <button id="toggle-list" class="key-btn narrow-only" type="button" aria-label="Toggle file list">files</button>
+  <span class="spacer"></span>
+  <button id="cmd-btn" class="key-btn study-only-inline" type="button" title="Command: organize files or ask anything (:)"><b>:</b> command</button>
+  <button id="theme-btn" class="key-btn" type="button" data-theme-toggle title="Light / dark (T)">&#9680; theme</button>
+  <button id="help-btn" class="key-btn" type="button" aria-label="Help">? help</button>
+</header>
+
+<main id="files" class="panes">
+  <section id="list-pane" class="pane" aria-label="Files">
+    <h2 class="pane-title" id="list-title">files</h2>
+    <ul id="list" class="list" role="listbox"></ul>
+  </section>
+  <section id="view-pane" class="pane" aria-label="Viewer">
+    <h2 class="pane-title" id="view-title">no file open</h2>
+    <div class="pane-actions">
+      <button id="hist-btn" class="pane-action" type="button" hidden title="Still don't get it? A short history of the problem this idea solved (h, experimental)"><b>h</b> history <span class="exp-tag">experimental</span></button>
+      <button id="chat-btn" class="pane-action" type="button" hidden title="Chat about this file (c)"><b>c</b> chat about this</button>
+    </div>
+    <div id="branch-bar" class="branch-bar" hidden></div>
+    <div id="viewer" class="viewer" tabindex="-1">
+      <p class="empty">Pick a file on the left (or press <kbd>j</kbd>/<kbd>k</kbd> and <kbd>enter</kbd>).</p>
+    </div>
+  </section>
+</main>
+
+<main id="study" class="study-panes">
+  <section id="study-view-pane" class="pane focused" aria-label="Learn">
+    <h2 class="pane-title" id="study-title">learn</h2>
+    <div id="study-view" class="viewer study-view" tabindex="-1"></div>
+  </section>
+</main>
+
+<footer class="bar bottom">
+  <span id="mode" class="mode">LIST</span>
+  <span id="status" class="status"></span>
+  <span class="spacer"></span>
+  <span id="hints" class="hints"></span>
+</footer>
+
+<div id="help" class="overlay" hidden>
+  <section class="pane help-pane" aria-label="Keys">
+    <h2 class="pane-title">keys</h2>
+    <table>
+      <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>switch tab</td></tr>
+      <tr><td><kbd>j</kbd> <kbd>k</kbd> / arrows</td><td>move in the list, or scroll the open file</td></tr>
+      <tr><td><kbd>enter</kbd> <kbd>l</kbd></td><td>open the selected file, or fold / unfold a folder</td></tr>
+      <tr><td><kbd>h</kbd></td><td>list: fold the folder or go to the folder above · viewer: ← or tab goes back to the list</td></tr>
+      <tr><td><kbd>tab</kbd></td><td>switch between list and viewer</td></tr>
+      <tr><td><kbd>n</kbd> <kbd>p</kbd></td><td>next / previous page</td></tr>
+      <tr><td><kbd>g</kbd> <kbd>G</kbd></td><td>first / last page</td></tr>
+      <tr><td><kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd></td><td>zoom in / out / fit width</td></tr>
+      <tr><td><kbd>i</kbd></td><td>invert PDF colors (dark pages)</td></tr>
+      <tr><td><kbd>s</kbd></td><td>view the LaTeX source of a PDF</td></tr>
+      <tr><td><kbd>d</kbd></td><td>download the open file</td></tr>
+      <tr><td><kbd>c</kbd></td><td>chat about the open file (resumes its last chat)</td></tr>
+      <tr><td><kbd>x</kbd></td><td>chat (passcode)</td></tr>
+      <tr><td><kbd>T</kbd></td><td>light / dark theme</td></tr>
+      <tr><td><kbd>?</kbd> <kbd>esc</kbd></td><td>show / hide this help</td></tr>
+      <tr class="study-only"><td><kbd>:</kbd> <kbd>/</kbd></td><td>command: "make a folder os", "move the mutex explainer into concurrency", "open my mutex notes", "what have I got on hashing", "explain semaphores, put it in os" (deletes ask first; <kbd>u</kbd> undoes)</td></tr>
+      <tr class="study-only"><td><kbd>b</kbd></td><td>on a prerequisite explainer: back up to the one it branched from</td></tr>
+      <tr class="study-only"><td><kbd>h</kbd></td><td>in the viewer or learn list: still don't get it? a short history of how the idea came to be (experimental)</td></tr>
+      <tr class="study-only"><td><kbd>a</kbd></td><td>learn: type what you're stuck on, get a short PDF (passcode)</td></tr>
+      <tr class="study-only"><td><kbd>t</kbd></td><td>learn: time spent, by topic or by week</td></tr>
+      <tr class="study-only"><td><kbd>j</kbd> <kbd>k</kbd> <kbd>o</kbd> <kbd>e</kbd> <kbd>c</kbd></td><td>learn list: move / open / edit topic / chat about it</td></tr>
+    </table>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "dum-learn",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "publish": "./deploy/publish.sh"
+  },
+  "type": "module",
+  "dependencies": {
+    "@highlightjs/cdn-assets": "^11.12.0",
+    "pdfjs-dist": "^6.4.299",
+    "katex": "^0.19.1"
+  },
+  "private": true
+}

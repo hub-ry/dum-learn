@@ -1,0 +1,60 @@
+\documentclass[11pt]{article}
+\usepackage{learn}
+\title{What a Mutex Is}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+
+A mutex (mutual exclusion lock) is an object with two operations, \code{lock} and \code{unlock}. At most one thread can hold it at a time; any other thread calling \code{lock} blocks until the holder calls \code{unlock}. Wrap every read and write of shared state in that pair and the critical section runs as if single-threaded.
+
+\section{Why it works}
+
+The guarantee comes from the hardware, not the library. A mutex is built on an atomic instruction (compare-and-swap or test-and-set) that reads and writes a word in one indivisible step. From that you get:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Atomic acquire.} \code{lock} does a CAS on a flag: if it was free, it becomes held by you and you proceed; if not, you spin or sleep.
+  \item \textbf{Exclusive ownership.} Only the CAS winner sets the flag, so only one thread enters.
+  \item \textbf{Release with ordering.} \code{unlock} stores the flag back to free. The compiler and CPU are told not to reorder memory accesses across the lock/unlock, so writes inside the critical section are visible to the next holder.
+\end{enumerate}
+
+That last point is the part people miss: a mutex is also a memory barrier. It is not just "don't run at the same time", it is "everything I wrote before \code{unlock} is visible after the next \code{lock}".
+
+\section{Example}
+
+\begin{lstlisting}[style=py]
+import threading
+
+counter = 0
+lock = threading.Lock()
+
+def bump():
+    global counter
+    for _ in range(100000):
+        with lock:          # lock() ... unlock() even on exception
+            counter += 1
+
+ts = [threading.Thread(target=bump) for _ in range(4)]
+for t in ts: t.start()
+for t in ts: t.join()
+print(counter)              # 400000, always
+\end{lstlisting}
+
+Drop the \code{with lock} and \code{counter += 1} (a read, an add, a write) interleaves across threads and you lose increments. The lock makes the three steps one critical section.
+
+\underneath{\code{lock} on a contended mutex is a syscall: the thread parks in the kernel and is woken on \code{unlock}. That costs on the order of microseconds, far more than the increment it protects. Uncontended, it is a single atomic instruction, tens of nanoseconds. So keep critical sections tiny and never do I/O or call unknown code while holding a lock.}
+
+\section{Pitfalls}
+
+\begin{itemize}[nosep]
+  \item \textbf{Deadlock.} Two locks acquired in different orders by two threads. Fix: one global lock order.
+  \item \textbf{Forgetting to unlock} on an early return or exception. In Python use \code{with}; in C++ use \code{std::lock\_guard} / \code{std::unique\_lock}, never raw \code{lock}/\code{unlock}.
+  \item \textbf{Thinking it makes data thread-safe.} It only protects what you actually wrap. A field read outside the lock is still a race.
+  \item \textbf{Recursive locking.} A plain mutex is not reentrant; locking it twice in one thread deadlocks. Python's \code{Lock} is non-reentrant; \code{RLock} is the reentrant one.
+\end{itemize}
+
+\begin{keypoint}
+A mutex turns a multi-step operation on shared state into an atomic one by letting exactly one thread hold the lock at a time, and it doubles as a memory barrier so writes inside the critical section are visible to the next holder. Protect the smallest region you can, and always release via RAII or \code{with}.
+\end{keypoint}
+
+\end{document}

@@ -1,0 +1,54 @@
+\documentclass[11pt]{article}
+\usepackage{learn}
+\usepackage{tikz}
+\title{History: What a Mutex Is}
+\author{}
+\date{Experimental history lesson}
+\begin{document}
+\maketitle
+
+\section{The world before: a flag that lies}
+By the early 1960s computers ran several programs at once, switching between them so fast it looked simultaneous. Programs shared things: a printer, a tape drive, a table of open files. The obvious guard was a flag in memory. A program checks the flag; if it is clear, it sets it and uses the resource; when done it clears the flag. Anyone who finds it set waits.
+
+This fails, and the failure is the whole story. Suppose thread A reads the flag and sees clear. Before A can set it, the scheduler switches to thread B. B also reads clear. Both set the flag, both believe they own the resource, and both write to it. The flag was never wrong; the \emph{pair} of steps, read then write, was interrupted in the middle. The bug is invisible in testing and appears under load.
+
+\section{Attempts and failures}
+\textbf{Turn taking.} One fix was a shared turn variable: only the thread whose turn it is may enter. It gives mutual exclusion, but it also forces strict alternation. If A does not want in, B still waits for its turn. That is a liveness failure, so any real solution must let a thread enter whenever the resource is free, not on a schedule.
+
+\textbf{Double-checking the flag.} Read the flag, set it, then read it again to confirm you won. This shrinks the window but does not close it: the second read can still be interleaved. It reveals a constraint: no number of ordinary reads and writes can fix this, because each one can be split from the next.
+
+\textbf{Disabling interrupts.} On a single CPU, a program could turn off interrupts so nothing preempts it during the check and set. That works on one core and is useless on two, and it lets a buggy program freeze the machine. The constraint sharpens: the fix must work across processors and must not depend on the operating system stepping in.
+
+By the mid 1960s the requirement was clear. We need one operation that reads the flag and sets it as a single indivisible step, so no other thread can slip between the read and the write.
+
+\section{The insight}
+The hardware people supplied it. Edsger Dijkstra's 1965 paper on cooperating sequential processes described the problem and the primitives; around the same period machines gained instructions that do a read and a conditional write atomically. The common one is test-and-set: it reads a word and sets it to a busy value in one instruction, returning the old value. Compare-and-swap is a cousin: it writes a new value only if the word still holds an expected old value, and reports whether it succeeded.
+
+\begin{keypoint}[title={The mechanism}]
+\texttt{lock} does a test-and-set (or CAS) on the flag. If the old value was clear, you set it and you own the lock. If it was already set, you did not change anything and you try again or sleep. Because the instruction is indivisible, exactly one thread can observe ``clear'' and win. The check and the set are no longer two steps that can be split.
+\end{keypoint}
+
+That is the answer to your question. Two threads cannot just check a flag because checking and setting are two steps, and the gap between them is where the other thread gets in. The atomic instruction removes the gap. \texttt{unlock} stores the flag back to clear, and the lock and unlock also act as memory barriers so writes made inside the critical section are visible to the next holder.
+
+\section{What it unlocked, and what it costs}
+With an atomic primitive, operating systems could build real locks. Dijkstra's semaphore, and later the mutex, wrapped the primitive in a wait queue so a blocked thread sleeps in the kernel instead of spinning. Uncontended, a lock is one atomic instruction, tens of nanoseconds. Contended, it is a system call, microseconds. That cost is why critical sections stay small.
+
+The costs remain. Deadlock when two locks are taken in different orders. Forgetting to unlock on an early return, which is why C++ uses \code{std::lock\_guard} and Python uses \code{with}. And the lock only protects what you actually wrap; a read outside it is still a race.
+
+\section{Back to your question}
+A flag is data, and data can be read and written in separate steps. A mutex is built on an instruction the hardware promises to finish in one step, so the check and the claim cannot be separated. That is why the flag alone can never work and the atomic test-and-set can.
+
+\section{Timeline}
+\begin{tabular}{@{}ll@{}}
+\toprule
+1965 & Dijkstra describes cooperating processes and the mutual exclusion problem \\
+1960s & Machines gain atomic test-and-set and compare-and-swap instructions \\
+1965 & Dijkstra introduces the semaphore, a lock with a wait queue \\
+\bottomrule
+\end{tabular}
+
+\section{Read next}
+E. W. Dijkstra, ``Cooperating Sequential Processes'' (1965), the paper that framed the problem and the primitives.
+
+Back to the regular explainer when you're ready, or press c to ask.
+\end{document}

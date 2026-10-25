@@ -1,0 +1,38 @@
+# /etc/systemd/system/learn.service on hub. Installed by deploy/install.sh.
+# Serves the published site (/var/lib/learn, written only by deploy/publish.sh)
+# on loopback; your reverse proxy forwards the site here.
+[Unit]
+Description=dum-learn static PDF/code viewer (behind a reverse proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=learn
+Group=learn
+WorkingDirectory=/opt/learn
+ExecStart=/usr/local/bin/node /opt/learn/server.mjs
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8072
+Environment=LEARN_ROOT=/var/lib/learn
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ReadOnlyPaths=/opt/learn /var/lib/learn
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

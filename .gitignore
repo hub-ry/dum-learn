@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+# your own content and data never belong in the repo
+/content/
+/data/
+passcode

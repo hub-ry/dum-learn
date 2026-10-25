@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:,">
+  <title>Learn · Explore with DeepSeek</title>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/explore/style.css">
+  <script type="module" src="/time.js"></script>
+  <script type="module" src="/explore/app.js"></script>
+</head>
+<body>
+  <section id="gate" class="gate" aria-labelledby="gate-title">
+    <div class="login-card">
+      <h2 class="pane-title" id="gate-title">learn</h2>
+      <span class="eyebrow">LEARN / DEEPSEEK</span>
+      <p>Follow your curiosity. Ask, think things through, keep exploring.</p>
+      <form id="login-form" hidden>
+        <label for="passcode">Passcode</label>
+        <input id="passcode" type="password" autocomplete="current-password" required>
+        <button id="login-button" class="primary" type="submit">Open workspace</button>
+      </form>
+      <p id="gate-status" role="status">Connecting…</p>
+      <button id="connection-retry" class="quiet" type="button" hidden>Try again</button>
+    </div>
+  </section>
+
+  <div id="workspace" hidden>
+    <button id="sidebar-shade" class="sidebar-shade" type="button" aria-label="Close history" hidden></button>
+
+    <header class="bar top">
+      <a class="brand" href="/" title="Back to files and study">learn</a>
+      <a class="tab" href="/" title="Files and study">files &amp; learn</a>
+      <button id="new-chat" class="tab" type="button"><span class="num">n:</span>new</button>
+      <button id="context-toggle" class="tab" type="button" aria-controls="context-panel" aria-expanded="false"><span class="num">c:</span>context<span id="context-dot" class="context-dot" hidden> ●</span></button>
+      <button id="open-history" class="key-btn narrow-only" type="button" aria-label="Open history">history</button>
+      <span class="spacer"></span>
+      <button class="key-btn" type="button" data-theme-toggle title="Light / dark (T)">&#9680; theme</button>
+      <button id="rename" class="key-btn" type="button">rename</button>
+      <button id="delete" class="key-btn danger" type="button">delete</button>
+      <button id="logout" class="key-btn" type="button">logout</button>
+      <button id="help-btn" class="key-btn" type="button" aria-label="Help">? help</button>
+    </header>
+
+    <main class="panes">
+      <aside id="sidebar" class="pane sidebar" aria-label="Explorations">
+        <h2 class="pane-title">explorations</h2>
+        <div class="history-heading"><span>conversations</span><span class="spacer"></span><button id="refresh" class="key-btn" type="button" title="Refresh saved conversations">refresh</button></div>
+        <nav id="history" class="list history" aria-label="Saved conversations"></nav>
+        <div class="sidebar-footer"><span id="model-status">DeepSeek</span><button id="close-history" class="key-btn narrow-only" type="button" aria-label="Close history">close</button></div>
+      </aside>
+
+      <section id="main-pane" class="pane focused" aria-label="Exploration">
+        <h2 class="pane-title" id="chat-title">new exploration</h2>
+        <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="dismiss-error" class="quiet" type="button" aria-label="Dismiss error">dismiss</button></div>
+
+        <section id="context-panel" class="context-panel" aria-labelledby="context-title" hidden>
+          <div class="context-heading">
+            <h2 id="context-title">context</h2>
+            <span id="context-count">0 / 14,000</span>
+          </div>
+          <p>Notes for this exploration only. Pin useful details or an answer you want to keep in view.</p>
+          <label class="sr-only" for="context-input">Pinned conversation context</label>
+          <textarea id="context-input" rows="5" placeholder="What should DeepSeek keep in mind?"></textarea>
+          <div class="context-footer">
+            <span id="context-state" role="status">No pinned context</span>
+            <span class="context-actions">
+              <button id="context-clear" class="quiet" type="button">clear</button>
+              <button id="context-save" class="primary" type="button">save context</button>
+            </span>
+          </div>
+        </section>
+
+        <div id="conversation-scroll" class="conversation-scroll">
+          <section id="welcome" class="welcome">
+            <span class="eyebrow">ROOM TO WONDER</span>
+            <h2>What are you curious about?</h2>
+            <p>Start with a question, a half-formed idea, or something you're building. See where it takes you.</p>
+          </section>
+          <section id="messages" class="messages" aria-label="Conversation" aria-busy="false"></section>
+        </div>
+
+        <div class="composer-area">
+          <p id="stream-status" class="stream-status" role="status"></p>
+          <form id="composer" class="composer">
+            <span class="prompt-sign">&gt;</span>
+            <label class="sr-only" for="message-input">Message DeepSeek</label>
+            <textarea id="message-input" rows="1" placeholder="Ask anything. Follow the thread." autocomplete="off"></textarea>
+            <div class="composer-actions">
+              <span class="keyboard-note">enter send · shift+enter new line</span>
+              <button id="stop" type="button" class="primary" hidden>stop</button>
+              <button id="send" class="primary" type="submit">send ↑</button>
+            </div>
+          </form>
+          <p class="context-note">DeepSeek gets your saved pinned context and recent conversation history.<span id="trimmed-note"></span> Other chats aren't included.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bar bottom">
+      <span class="mode" id="mode">CHAT</span>
+      <span class="spacer"></span>
+      <span class="hints"><b>enter</b> send &nbsp;<b>shift+enter</b> new line &nbsp;<b>c</b> context &nbsp;<b>n</b> new &nbsp;<b>?</b> keys</span>
+    </footer>
+  </div>
+
+  <div id="help" class="overlay" hidden>
+    <section class="pane help-pane" aria-label="Keys">
+      <h2 class="pane-title">keys</h2>
+      <table>
+        <tr><td><kbd>enter</kbd></td><td>send the message</td></tr>
+        <tr><td><kbd>shift</kbd>+<kbd>enter</kbd> / <kbd>ctrl</kbd>+<kbd>enter</kbd></td><td>new line / send</td></tr>
+        <tr><td><kbd>c</kbd></td><td>toggle the context panel (when not typing)</td></tr>
+        <tr><td><kbd>n</kbd></td><td>new exploration (when not typing)</td></tr>
+        <tr><td><kbd>T</kbd></td><td>light / dark theme</td></tr>
+        <tr><td><kbd>?</kbd> <kbd>esc</kbd></td><td>show / hide this help</td></tr>
+        <tr><td><kbd>esc</kbd></td><td>close the context panel or history</td></tr>
+        <tr><td>stop</td><td>end the reply early; the partial text is saved</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <dialog id="action-dialog" aria-labelledby="dialog-title">
+    <form id="action-form">
+      <h2 id="dialog-title"></h2>
+      <p id="dialog-description"></p>
+      <label id="rename-label" for="rename-input">Conversation name</label>
+      <input id="rename-input" type="text" maxlength="200" autocomplete="off">
+      <div class="dialog-actions"><button id="dialog-cancel" type="button">Cancel</button><button id="dialog-confirm" class="primary" type="submit">Save</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

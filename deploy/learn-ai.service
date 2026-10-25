@@ -1,0 +1,21 @@
+# ~/.config/systemd/user/learn-ai.service (systemd --user; enable linger so it runs while logged out).
+# The study + chat backend: /api/* on 127.0.0.1:8075. Assumes the repo lives at ~/code/dum-learn;
+# put DEEPSEEK_API_KEY and anything else from .env.example in ~/.config/learn/env (chmod 600).
+[Unit]
+Description=dum-learn: study + chat backend (/api/*, behind a reverse proxy)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/code/dum-learn
+ExecStart=/usr/bin/env node %h/code/dum-learn/ai/server.mjs
+EnvironmentFile=%h/.config/learn/env
+Environment=HOST=127.0.0.1
+Environment=PORT=8075
+Environment=NODE_ENV=production
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target
