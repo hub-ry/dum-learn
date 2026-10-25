@@ -12,6 +12,7 @@
 <script type="module" src="/app.js"></script>
 <script type="module" src="/study.js"></script>
 <script type="module" src="/command.js"></script>
+<script type="module" src="/infinite.js"></script>
 <script type="module" src="/sidechat.js"></script>
 </head>
 <body>
@@ -48,6 +49,7 @@
       <aside id="sidechat" class="sidechat" aria-label="Chat about this file" hidden>
         <header class="sc-head">
           <span class="sc-title" id="sc-title">chat</span>
+          <button id="sc-inf" class="quiet sc-inf" type="button" aria-pressed="true">infinite: on</button>
           <button id="sc-new" class="quiet" type="button" hidden title="Start a fresh chat about this file">new</button>
           <button id="sc-close" class="quiet" type="button" title="Collapse (c)" aria-label="Collapse chat">&rsaquo;&rsaquo;</button>
         </header>

@@ -21,6 +21,21 @@ branch to what it builds on, or ask how the idea came to be.
   `c` or the edge tab collapses it, and the width and open state are
   remembered. On a phone it's a bottom sheet. `esc` in the box takes you back to
   the page. Works for PDFs and code/text files.
+- **Infinite learn.** In the chat beside a PDF, a short answer (two sentences
+  or less) stays in chat. A longer one becomes the next page of a running
+  LaTeX session document, shown below the PDF you're reading, so the session
+  builds into one PDF you can scroll. Each page uses the same `learn.sty` and
+  teaching rules, starts with a box showing what you asked (linked back to
+  the page and selection you asked from), and compiles in a second or two. A
+  "writing next page…" placeholder shows while the model writes it. Press `c`
+  on one of those pages to ask a follow-up about that page; the answer becomes
+  another page. Pages are only written when you ask. The one exception is a
+  single "continue" page, written when you reach the bottom within a few
+  minutes of asking something. Sessions stop at 12 pages
+  (`LEARN_INFINITE_MAX_PAGES`), and the daily caps still apply. Each session
+  is saved in the tree as `<tab>/sessions/<date>-<topic>.tex`, which you can
+  reopen later to pick up the same chat and keep going. Toggle it with
+  "infinite: on/off" in the chat header; the setting is remembered.
 - **One AI command box** (`:` or `/`) for the file side, in plain English:
   make, rename, or delete folders, move or rename files, retag topics, open
   or find files, and write a new explainer into a folder. The model can only
@@ -58,7 +73,7 @@ branch to what it builds on, or ask how the idea came to be.
 | `h` / `←` | tree: fold, or go up a folder · viewer: `h` is a history lesson, `←`/`tab` go back to the tree |
 | `n` `p` · `g` `G` · `+` `-` `0` | page · first/last · zoom |
 | `i` · `s` · `d` | invert PDF · view LaTeX source · download |
-| `c` | open / collapse the chat beside the file |
+| `c` | open / collapse the chat beside the file · on a page written this session: ask a follow-up about it |
 | `:` or `/` | command box (`y` confirm, `n` cancel, `u` undo, `1`-`9` open a result) |
 | `a` | learn: type what you're stuck on |
 | `b` | back up from a prerequisite explainer |
@@ -115,7 +130,7 @@ Your data (sessions, chats, time, lessons, undo log, trash) lives in
 
 ```
 ai/        server.mjs (API), prompts.mjs, files.mjs (path rules), tex.mjs, llm.mjs
-web/       the site (tree, viewer, command box, learn view, time chart)
+web/       the site (tree, viewer, side chat + infinite learn, command box, learn view, time chart)
 build.mjs  content root -> static site (PDFs, highlighted code, index)
 deploy/    publish, systemd units, install
 examples/  learn.sty and a few sample explainers

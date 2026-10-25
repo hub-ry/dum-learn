@@ -268,3 +268,62 @@ Rules:
 export function commandUser({ listing, open, text }) {
   return `Listing (folders end with /; files show "title" and [topic] when known):\n${listing}\n\nOpen file: ${open ?? "none"}\n\nRequest: ${text}`;
 }
+
+// Infinite learn: in the side chat next to a PDF, anything longer than two
+// sentences becomes the next page of a running LaTeX session document instead
+// of a chat reply. This rule is added to CHAT_SYSTEM; the server watches for
+// the PAGE: line and writes the page with sessionPageSystem.
+export const INFINITE_RULE = `INFINITE MODE (overrides the length rules above): he is reading a PDF, and long answers become new PDF pages appended below it, so the session builds into one document.
+- If your complete answer fits in at most two short sentences, answer here as usual.
+- If it needs more than two sentences (an explanation, a derivation, steps, an example, code, a comparison), do NOT answer here. Reply with exactly one line and nothing else:
+PAGE: <a short, specific title for the page that answers it, at most 8 words>`;
+
+const SESSION_PAGE_TEMPLATE = `You write ONE new page of a running LaTeX study document for ${NAME}, a CS student. He is reading a document and asked something in the side chat; your page is appended below what he is reading, so the whole session builds into one PDF he can scroll and come back to.
+
+What he asked: {{question}}
+Where he was: {{where}}
+Kind of page: {{kind}}
+His level: {{level}}
+
+The document he is reading (context only; don't repeat it):
+{{source}}
+
+Pages already written this session (don't repeat them; build on them and refer back by title):
+{{pages}}
+{{scope}}
+OUTPUT FORMAT
+- Only the page body inside <tex>...</tex>, nothing else (no Markdown, no code fences, no commentary).
+- The body is inserted into an existing document: no preamble, no \\documentclass, no \\usepackage, no \\begin{document}, no \\title or \\maketitle, no \\end{document}.
+- Start with \\section{<short specific title>}. Use \\subsection only if it helps.
+- Length (hard limit): about one page at 11pt, 250 to 450 words, never more than two pages. At most one small TikZ figure OR one code listing of at most 12 lines.
+- Available (from learn.sty and the preamble): \\code{inline code} (escape _ # % & $ { } inside it, e.g. \\code{hash\\_map}); \\underneath{text} for what happens underneath / what it costs; the keypoint box (\\begin{keypoint}[title={...}] ... \\end{keypoint}); lstlisting with [style=py], [style=cpp], [style=sh], [style=ts] or [style=json]; amsmath, booktabs, tabularx, enumitem, tcolorbox, xcolor, hyperref; TikZ (plain \\begin{tikzpicture} with \\draw, \\node, \\fill; no \\usetikzlibrary, place nodes with coordinates). If unsure a macro exists, use plain LaTeX.
+- Never use \\input, \\include, \\write, \\read, \\includegraphics, \\catcode, \\csname or any file or shell command.
+- It must compile on the first try. ASCII only; math mode for symbols ($O(1)$, $\\to$, $\\le$). Escape special characters (& % $ # _ { } ~ ^ \\) in text. Balance every environment.
+
+HOW TO TEACH ON THIS PAGE
+- First paragraph: the direct answer in one or two sentences. If he only reads that, he is unstuck.
+- Then the mechanism from first principles, step by step, the concrete thing that happens (not a metaphor). Tie it to the document he is reading and the exact spot he was on.
+- Then one small concrete example traced with real values or real code (Python by default, C++ when memory or cost matters), showing intermediate state.
+- If his question shows a missing prerequisite, teach that one piece briefly instead.
+- End with one short line suggesting the natural next question, then: "Press c on this page to follow up."
+
+WRITING STYLE
+- Plain spoken English, short sentences, normal sentence case, no em dashes. One name per concept. No framing labels like "key insight" or "TL;DR".
+- Accuracy over fluency. Do not invent APIs, numbers or citations. If unsure, say so plainly or leave it out.`;
+
+const PAGE_KINDS = {
+  ask: "answer his question",
+  follow: "a follow-up: he asked this while reading one of the pages already written this session (shown below). Go from that page: answer exactly what he asked about it, one level deeper, without repeating it",
+  continue: "a continuation: he finished the last page and kept scrolling. Take the last page one natural step further (the next idea it sets up, the deeper mechanism, or a worked example he hasn't seen yet). Don't repeat it, don't start a new topic",
+};
+export function sessionPageSystem({ question, where, kind, source, pages, scope, level }) {
+  // The optional scope block goes in first so an empty one leaves no trace.
+  const t = SESSION_PAGE_TEMPLATE.replace("{{scope}}", scope ? `\nThe page he is asking about:\n${scope.replace(/\{\{/g, "{ {")}\n` : "");
+  return fill(t, {
+    question, where, kind: PAGE_KINDS[kind] ?? PAGE_KINDS.ask, source, level: level || DEFAULT_LEVEL,
+    pages: pages || "(none yet: this is the first page)",
+  });
+}
+export function sessionPageUser({ question, title }) {
+  return `Write the page${title ? ` (working title: ${title})` : ""} for: ${question}`;
+}

@@ -585,3 +585,19 @@ body.sc-dragging .viewer { pointer-events: none; }
 :root[data-theme="light"] .sidechat .sc-handle, :root[data-theme="light"] .sc-handle { background: var(--bg); }
 :root[data-theme="light"] .page .textLayer ::selection { background: rgb(194 65 12 / 0.28); }
 @media (max-width: 760px) { :root[data-theme="light"] .sidechat { box-shadow: 0 -4px 14px rgb(0 0 0 / 0.12); } }
+
+/* ---- infinite learn: session pages below the PDF ---------------------- */
+.sc-inf { font-size: 12px; white-space: nowrap; }
+.sc-inf[aria-pressed="false"] { color: var(--muted); }
+.sc-where .sc-scope { color: var(--fg); min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-where .sc-scope .quiet { font-size: 12px; }
+.message.page-msg .message-body { color: var(--muted); }
+.sc-page-link { font-size: 12px; }
+.appx-tail {
+  width: min(100%, 60ch); margin: 0 auto; padding: 1.2em 1em; text-align: center;
+  font-size: 13px; color: var(--muted); border: 1px dashed var(--muted); border-radius: 6px;
+}
+.appx-tail.writing { animation: appx-pulse 1.6s ease-in-out infinite; }
+.appx-tail.error { color: var(--error, #b91c1c); border-color: currentColor; }
+@keyframes appx-pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .appx-tail.writing { animation: none; } }

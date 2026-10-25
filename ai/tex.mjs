@@ -1,7 +1,7 @@
 // Lesson documents: LaTeX in the site's style (learn.sty), compiled with
 // tectonic exactly like build.mjs does, then published with deploy/publish.sh.
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir, copyFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -39,7 +39,8 @@ function run(cmd, args, opts) {
 }
 
 // Compile in a scratch dir. Returns { ok, log } with the useful error lines.
-export async function compileTex(tex, contentRoot) {
+// pdfOut: also keep the built PDF there (infinite-learn section pages).
+export async function compileTex(tex, contentRoot, { pdfOut } = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "learn-ai-tex-"));
   try {
     await writeFile(path.join(dir, "lesson.tex"), tex);
@@ -57,6 +58,7 @@ export async function compileTex(tex, contentRoot) {
       const info = await run("pdfinfo", [path.join(dir, "lesson.pdf")], { cwd: dir, timeout: 15_000 }).catch(() => null);
       const m = info?.stdout?.match(/^Pages:\s+(\d+)/m);
       if (m) pages = Number(m[1]);
+      if (pdfOut) await copyFile(path.join(dir, "lesson.pdf"), pdfOut);
     }
     return { ok: r.ok, pages, log: (errs.join("\n---\n") || all).slice(0, 3000) };
   } finally {

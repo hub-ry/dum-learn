@@ -25,10 +25,16 @@ const state = {
   invert: localStorage.getItem("learn.invert") !== "0",
   collapsed: new Set((() => { try { return JSON.parse(localStorage.getItem("learn.collapsed") ?? "[]"); } catch { return []; } })()),
   doc: null,
-  pages: [], // { proxy, el, canvas, links, rendered, task }
+  pages: [], // { proxy, el, canvas, links, rendered, task, doc?, sec?, secTitle?, appx? }
   page: 1,
   loadToken: 0,
+  basePages: 0, // pages of the open PDF itself; the rest are infinite-learn pages
+  pendingPage: null, // from a "#/tab/path?page=N" link
 };
+const deferred = () => { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; };
+state.ready = deferred();
+// Infinite learn (web/infinite.js): section PDFs appended below the open PDF.
+const appx = { keys: [], docs: [], tail: null, queue: Promise.resolve() };
 
 const items = () => state.tabs[state.tab]?.items ?? [];
 
@@ -158,7 +164,8 @@ function renderChrome() {
   if (item) {
     parts.push(`${state.tabs[state.tab]?.name}/${state.showSource ? item.path : item.path.replace(/\.tex$/, ".pdf")}`);
     if (item.kind === "pdf" && !state.showSource && state.pages.length) {
-      parts.push(`page ${state.page}/${state.pages.length}`, `${Math.round(state.zoom * 100)}%`);
+      const cur = state.pages[state.page - 1];
+      parts.push(cur?.appx !== undefined ? `page ${state.page}/${state.pages.length} \u00B7 written this session` : `page ${state.page}/${state.pages.length}`, `${Math.round(state.zoom * 100)}%`);
       if (state.invert && document.documentElement.dataset.theme !== "light") parts.push("inv");
     }
   }
@@ -273,7 +280,8 @@ function openItem(item, { fromHash = false } = {}) {
 }
 
 function applyHash() {
-  const m = location.hash.match(/^#\/([^/]+)(?:\/(.+))?$/);
+  const pm = location.hash.match(/[?&]page=(\d{1,4})$/);
+  const m = location.hash.replace(/[?&]page=\d{1,4}$/, "").match(/^#\/([^/]+)(?:\/(.+))?$/);
   if (!m) return false;
   const tabName = decodeURIComponent(m[1]);
   const tabIdx = state.tabs.findIndex((t) => t.name === tabName);
@@ -284,6 +292,10 @@ function applyHash() {
   const item = items().find((it) => it.path === p);
   if (!item) return true;
   selectItem(item);
+  if (pm) {
+    if (state.open === item && state.pages.length) goToPage(Number(pm[1]));
+    else state.pendingPage = Number(pm[1]);
+  }
   openItem(item, { fromHash: true });
   setFocus("view");
   return true;
@@ -299,6 +311,11 @@ function closeDoc() {
   state.doc?.loadingTask.destroy();
   state.doc = null;
   state.page = 1;
+  state.basePages = 0;
+  for (const d of appx.docs) d?.loadingTask.destroy();
+  appx.keys = []; appx.docs = []; appx.tail = null;
+  state.ready.resolve(null); // wake anything waiting on the old document
+  state.ready = deferred();
 }
 
 function notice(text, cls = "notice") {
@@ -444,23 +461,112 @@ async function showPdf(item) {
   wrap.className = "pages";
   els.viewer.classList.toggle("invert", state.invert);
   state.pages = proxies.map((proxy, i) => {
-    const el = document.createElement("div");
-    el.className = "page";
-    el.dataset.n = String(i + 1);
-    const canvas = document.createElement("canvas");
-    const links = document.createElement("div");
-    links.className = "links";
-    const pnum = document.createElement("span");
-    pnum.className = "pnum";
-    pnum.textContent = `${i + 1}`;
-    el.append(canvas, links, pnum);
-    wrap.append(el);
-    return { proxy, el, canvas, links, rendered: false, task: null };
+    const p = makePage(proxy, i + 1);
+    wrap.append(p.el);
+    return p;
   });
+  state.basePages = state.pages.length;
   els.viewer.replaceChildren(wrap);
   layoutPages();
   for (const p of state.pages) observer.observe(p.el);
+  if (state.pendingPage) { goToPage(state.pendingPage); state.pendingPage = null; }
   renderChrome();
+  state.ready.resolve(state.basePages);
+}
+
+function makePage(proxy, n) {
+  const el = document.createElement("div");
+  el.className = "page";
+  el.dataset.n = String(n);
+  const canvas = document.createElement("canvas");
+  const links = document.createElement("div");
+  links.className = "links";
+  const pnum = document.createElement("span");
+  pnum.className = "pnum";
+  pnum.textContent = `${n}`;
+  el.append(canvas, links, pnum);
+  return { proxy, el, canvas, links, rendered: false, task: null };
+}
+
+function sizePage(p) {
+  const vp = p.proxy.getViewport({ scale: cssScale(p.proxy) });
+  p.el.style.width = `${Math.floor(vp.width)}px`;
+  p.el.style.height = `${Math.floor(vp.height)}px`;
+  p.task?.cancel();
+  p.rendered = false;
+}
+
+// Infinite learn: show the session's pages after the open PDF's own pages.
+// spec: { sections: [{ key, url, n, title }], tags: [{ from, to, n, title }]
+// (pages of the open PDF that already are session pages), tail: { text, kind } | null }.
+// Only ever appends (or drops a changed suffix), so reading position is kept.
+function setAppendix(spec) {
+  const token = state.loadToken;
+  const run = appx.queue.then(() => applyAppendix(spec, token));
+  appx.queue = run.catch((err) => console.error("appendix:", err));
+  return run;
+}
+async function applyAppendix(spec, token) {
+  await state.ready.promise;
+  if (token !== state.loadToken || !state.pages.length) return;
+  const wrap = els.viewer.querySelector(".pages");
+  if (!wrap) return;
+  for (let i = 0; i < state.basePages; i++) {
+    const p = state.pages[i];
+    delete p.sec; delete p.secTitle; delete p.el.dataset.sec;
+  }
+  for (const t of spec.tags ?? []) {
+    for (let i = Math.max(1, t.from); i <= Math.min(t.to, state.basePages); i++) {
+      const p = state.pages[i - 1];
+      p.sec = t.n; p.secTitle = t.title; p.el.dataset.sec = String(t.n);
+    }
+  }
+  const want = spec.sections ?? [];
+  let keep = 0;
+  while (keep < appx.keys.length && keep < want.length && appx.keys[keep] === want[keep].key) keep++;
+  if (keep < appx.keys.length) {
+    for (const p of state.pages.filter((q) => q.appx >= keep)) { p.task?.cancel(); observer.unobserve(p.el); p.el.remove(); }
+    state.pages = state.pages.filter((q) => !(q.appx >= keep));
+    for (const d of appx.docs.slice(keep)) d?.loadingTask.destroy();
+    appx.keys.length = keep; appx.docs.length = keep;
+    if (state.page > state.pages.length) state.page = state.pages.length;
+  }
+  for (const sec of want.slice(keep)) {
+    let doc = null, proxies = [];
+    try {
+      doc = await pdfjs.getDocument({ url: sec.url, isEvalSupported: false }).promise;
+      proxies = await Promise.all(Array.from({ length: doc.numPages }, (_, i) => doc.getPage(i + 1)));
+    } catch (err) {
+      console.error(`session page ${sec.n}:`, err);
+    }
+    if (token !== state.loadToken) { doc?.loadingTask.destroy(); return; }
+    const idx = appx.keys.length;
+    appx.keys.push(sec.key); appx.docs.push(doc);
+    for (const proxy of proxies) {
+      const p = makePage(proxy, state.pages.length + 1);
+      Object.assign(p, { doc, sec: sec.n, secTitle: sec.title, appx: idx });
+      p.el.dataset.sec = String(sec.n);
+      p.el.classList.add("appended");
+      state.pages.push(p);
+      wrap.insertBefore(p.el, appx.tail);
+      sizePage(p);
+      observer.observe(p.el);
+      if (isNearView(p.el)) renderPage(p);
+    }
+  }
+  if (spec.tail) {
+    if (!appx.tail) { appx.tail = document.createElement("div"); wrap.append(appx.tail); }
+    appx.tail.className = `appx-tail ${spec.tail.kind ?? ""}`;
+    appx.tail.textContent = spec.tail.text;
+  } else if (appx.tail) { appx.tail.remove(); appx.tail = null; }
+  renderChrome();
+}
+function scrollToSection(n) {
+  const p = state.pages.find((q) => q.sec === n);
+  if (!p) return false;
+  els.viewer.scrollTop = pageTop(p.el) - 8;
+  updateCurrentPage();
+  return true;
 }
 
 function cssScale(proxy) {
@@ -474,13 +580,7 @@ function cssScale(proxy) {
 function layoutPages() {
   if (!state.pages.length) return;
   const anchor = currentPosition();
-  for (const p of state.pages) {
-    const vp = p.proxy.getViewport({ scale: cssScale(p.proxy) });
-    p.el.style.width = `${Math.floor(vp.width)}px`;
-    p.el.style.height = `${Math.floor(vp.height)}px`;
-    p.task?.cancel();
-    p.rendered = false;
-  }
+  for (const p of state.pages) sizePage(p);
   restorePosition(anchor);
   for (const p of state.pages) if (isNearView(p.el)) renderPage(p);
 }
@@ -543,7 +643,10 @@ async function renderLinks(p, viewport) {
     link.style.top = `${Math.min(y1, y2)}px`;
     link.style.width = `${Math.abs(x2 - x1)}px`;
     link.style.height = `${Math.abs(y2 - y1)}px`;
-    if (a.url) {
+    if (a.url && a.url.startsWith(`${location.origin}/#/`)) {
+      link.href = a.url.slice(location.origin.length + 1);
+      link.title = "back to where you asked";
+    } else if (a.url) {
       link.href = a.url;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
@@ -552,8 +655,11 @@ async function renderLinks(p, viewport) {
       link.href = "#";
       link.addEventListener("click", async (e) => {
         e.preventDefault();
-        const dest = typeof a.dest === "string" ? await state.doc.getDestination(a.dest) : a.dest;
-        if (dest) goToPage((await state.doc.getPageIndex(dest[0])) + 1);
+        // Session pages are separate PDFs: resolve in the page's own document.
+        const doc = p.doc ?? state.doc;
+        const dest = typeof a.dest === "string" ? await doc.getDestination(a.dest) : a.dest;
+        const first = state.pages.findIndex((q) => (q.doc ?? state.doc) === doc);
+        if (dest) goToPage(first + (await doc.getPageIndex(dest[0])) + 1);
       });
     }
     anchors.push(link);
@@ -648,7 +754,8 @@ document.addEventListener("keydown", (e) => {
   // in a text field is never a shortcut.
   if (document.body.classList.contains("studying") || e.target.closest?.("input, textarea, select")) return;
   if (e.key === "x") { e.preventDefault(); location.href = "/explore/"; return; }
-  if (e.key === "c" && window.learnSide && document.body.classList.contains("has-study")) { e.preventDefault(); window.learnSide.toggle(); return; }
+  // c: chat; on a page written this session, a follow-up scoped to that page.
+  if (e.key === "c" && window.learnSide && document.body.classList.contains("has-study")) { e.preventDefault(); (window.learnSide.cKey ?? window.learnSide.toggle)(); return; }
   if (e.key === "b" && openKey()) {
     const info = window.learnStudy?.lessonAt?.(openKey());
     if (info?.parent) { e.preventDefault(); window.learnStudy.backUp(info.lesson); return; }
@@ -723,6 +830,15 @@ $("toggle-list").addEventListener("click", () => document.body.classList.toggle(
 els.viewer.addEventListener("pointerdown", () => { if (state.focus !== "view") setFocus("view"); });
 els.list.addEventListener("pointerdown", () => { if (state.focus !== "list") setFocus("list"); });
 els.viewer.addEventListener("scroll", () => requestAnimationFrame(updateCurrentPage), { passive: true });
+// Infinite learn: tell web/infinite.js when the reader reaches the end.
+let nearBottomAt = 0;
+els.viewer.addEventListener("scroll", () => {
+  const v = els.viewer;
+  if (!state.pages.length || v.scrollTop + v.clientHeight < v.scrollHeight - v.clientHeight * 0.5) return;
+  if (Date.now() - nearBottomAt < 1500) return;
+  nearBottomAt = Date.now();
+  document.dispatchEvent(new CustomEvent("learn:nearbottom"));
+}, { passive: true });
 window.addEventListener("popstate", applyHash);
 
 let lastWidth = 0;
@@ -793,7 +909,18 @@ window.learnApp = {
     document.dispatchEvent(new CustomEvent("learn:open"));
   },
   openKey: () => openKey(),
-  pageInfo: () => (state.open?.kind === "pdf" && !state.showSource && state.pages.length ? { page: state.page, pages: state.pages.length } : null),
+  // page is 1-based over everything shown; pages counts the open PDF's own
+  // pages; sec/secTitle are set on pages written this session.
+  pageInfo: () => {
+    if (state.open?.kind !== "pdf" || state.showSource || !state.pages.length) return null;
+    const p = state.pages[state.page - 1];
+    return { page: state.page, pages: state.basePages, total: state.pages.length, sec: p?.sec ?? null, secTitle: p?.secTitle ?? null, appended: p?.appx !== undefined };
+  },
+  isPdf: () => state.open?.kind === "pdf" && !state.showSource,
+  whenReady: () => (state.pages.length ? Promise.resolve(state.basePages) : state.ready.promise),
+  setAppendix,
+  scrollToSection,
+  scrollToEnd: () => { els.viewer.scrollTop = els.viewer.scrollHeight; },
   focusView: () => { setFocus("view"); els.viewer.focus({ preventScroll: true }); },
   inStudy: () => document.body.classList.contains("studying"),
 };
