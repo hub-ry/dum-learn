@@ -1,0 +1,381 @@
+{
+  "version": 1,
+  "note": "Generic DSA buckets seed for dum-learn. Course-specific seeds stay private.",
+  "buckets": [
+    {
+      "name": "Dynamic Programming",
+      "category": "dsa",
+      "tags": [
+        "DP",
+        "1-D DP",
+        "Multi-dimensional DP"
+      ],
+      "description": "Ishaan-style DP bucket before mixed practice.",
+      "subtopics": [
+        {
+          "name": "State meaning",
+          "status": "not_started"
+        },
+        {
+          "name": "Choices and recurrence",
+          "status": "not_started"
+        },
+        {
+          "name": "Base cases",
+          "status": "not_started"
+        },
+        {
+          "name": "Evaluation order",
+          "status": "not_started"
+        },
+        {
+          "name": "1-D DP",
+          "status": "not_started"
+        },
+        {
+          "name": "Tiling",
+          "status": "not_started"
+        },
+        {
+          "name": "Two-sequence DP",
+          "status": "not_started"
+        },
+        {
+          "name": "State-machine DP",
+          "status": "not_started"
+        },
+        {
+          "name": "Edit Distance",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "DP",
+        "Dynamic Programming"
+      ]
+    },
+    {
+      "name": "Python for LeetCode",
+      "category": "dsa",
+      "tags": [
+        "Python for LeetCode"
+      ],
+      "description": "Recorded as done in progress \u2014 seeded unverified (assumed known, not proven).",
+      "subtopics": [
+        {
+          "name": "Syntax for LC",
+          "status": "unverified"
+        },
+        {
+          "name": "Two Sum",
+          "status": "unverified"
+        },
+        {
+          "name": "Python drills (15/15)",
+          "status": "unverified"
+        }
+      ],
+      "linkTags": [
+        "Python for LeetCode"
+      ]
+    },
+    {
+      "name": "Stack and queue",
+      "category": "dsa",
+      "tags": [
+        "Stack and queue"
+      ],
+      "description": "Progress: unfinished / in progress. Subtopics start not started (no mastery guess).",
+      "subtopics": [
+        {
+          "name": "Stack basics",
+          "status": "not_started"
+        },
+        {
+          "name": "Min Stack",
+          "status": "not_started"
+        },
+        {
+          "name": "Queue via stacks",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Stack",
+        "Queue"
+      ]
+    },
+    {
+      "name": "Linked list",
+      "category": "dsa",
+      "tags": [
+        "Linked list"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Reverse list",
+          "status": "not_started"
+        },
+        {
+          "name": "Merge lists",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Linked List"
+      ]
+    },
+    {
+      "name": "Hashing",
+      "category": "dsa",
+      "tags": [
+        "Hashing"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Two Sum cold",
+          "status": "not_started"
+        },
+        {
+          "name": "Group Anagrams",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Hashing",
+        "Hash Table"
+      ]
+    },
+    {
+      "name": "Recursion and trees",
+      "category": "dsa",
+      "tags": [
+        "Recursion and trees"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "State meaning",
+          "status": "not_started"
+        },
+        {
+          "name": "Traversals",
+          "status": "not_started"
+        },
+        {
+          "name": "BST bounds",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Tree",
+        "Recursion",
+        "BST"
+      ]
+    },
+    {
+      "name": "Heap",
+      "category": "dsa",
+      "tags": [
+        "Heap"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Basic heap ops",
+          "status": "not_started"
+        },
+        {
+          "name": "Hard redo",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Heap"
+      ]
+    },
+    {
+      "name": "BFS and DFS",
+      "category": "dsa",
+      "tags": [
+        "BFS and DFS"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Visited state",
+          "status": "not_started"
+        },
+        {
+          "name": "Levels",
+          "status": "not_started"
+        },
+        {
+          "name": "Weighted paths",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "BFS",
+        "DFS",
+        "Graph"
+      ]
+    },
+    {
+      "name": "Monotonic stack",
+      "category": "dsa",
+      "tags": [
+        "Monotonic stack"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Daily Temperatures",
+          "status": "not_started"
+        },
+        {
+          "name": "Online Stock Span",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Monotonic Stack",
+        "Stack"
+      ]
+    },
+    {
+      "name": "Intervals (greedy)",
+      "category": "dsa",
+      "tags": [
+        "Intervals"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Non-overlapping Intervals",
+          "status": "not_started"
+        },
+        {
+          "name": "Prove the greedy",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Intervals",
+        "Greedy"
+      ]
+    },
+    {
+      "name": "Trie",
+      "category": "dsa",
+      "tags": [
+        "Trie"
+      ],
+      "description": "LeetCode plan topic.",
+      "subtopics": [
+        {
+          "name": "Search Suggestions System",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "Trie"
+      ]
+    },
+    {
+      "name": "Implement drills",
+      "category": "dsa",
+      "tags": [
+        "Implement drills"
+      ],
+      "description": "Cold redo slot.",
+      "subtopics": [
+        {
+          "name": "Cold redo slot",
+          "status": "not_started"
+        },
+        {
+          "name": "Review sessions",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": []
+    },
+    {
+      "name": "Mixed checkpoints",
+      "category": "dsa",
+      "tags": [
+        "Checkpoints"
+      ],
+      "description": "Timed mixed sets.",
+      "subtopics": [
+        {
+          "name": "Timed mixed sets",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": []
+    },
+    {
+      "name": "1-D DP and tiling",
+      "category": "dsa",
+      "tags": [
+        "1-D DP",
+        "DP"
+      ],
+      "description": "Plan sessions 22-25.",
+      "subtopics": [
+        {
+          "name": "Min Cost",
+          "status": "not_started"
+        },
+        {
+          "name": "House Robber",
+          "status": "not_started"
+        },
+        {
+          "name": "Coin Change",
+          "status": "not_started"
+        },
+        {
+          "name": "Tiling",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "DP"
+      ]
+    },
+    {
+      "name": "Multi-dimensional DP",
+      "category": "dsa",
+      "tags": [
+        "DP"
+      ],
+      "description": "Plan sessions 26, 29-31.",
+      "subtopics": [
+        {
+          "name": "Unique Paths",
+          "status": "not_started"
+        },
+        {
+          "name": "LCS",
+          "status": "not_started"
+        },
+        {
+          "name": "Stock with Fee",
+          "status": "not_started"
+        },
+        {
+          "name": "Edit Distance",
+          "status": "not_started"
+        }
+      ],
+      "linkTags": [
+        "DP"
+      ]
+    }
+  ]
+}

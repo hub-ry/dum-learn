@@ -16,6 +16,7 @@ import { createLLM, BudgetError } from "./llm.mjs";
 import { checkTex, compileTex, texToText, createPublisher, writeLessonFile } from "./tex.mjs";
 import * as P from "./prompts.mjs";
 import { createFiles, FsError } from "./files.mjs";
+import { createBucketsLibrary, parseBucketCommand } from "./buckets.mjs";
 
 const HOME = os.homedir();
 const HERE = path.dirname(new URL(import.meta.url).pathname);
@@ -670,6 +671,139 @@ async function undoBatch(bid) {
 async function readManifest() {
   try { return JSON.parse(await readFile(path.join(STATIC, "manifest.json"), "utf8")); } catch { return { tabs: [] }; }
 }
+
+const buckets = await createBucketsLibrary({
+  dataDir: DATA,
+  contentRoot: CONTENT,
+  readManifest,
+  leetcodeSnapshot: async () => ({ problems: [] }),
+  lessonsOf: () => Object.values(S.lessons).map((l) => ({ id: l.id, title: l.title, topic: l.topic, folder: l.folder, status: l.status })),
+  locked, id, HttpError, now,
+});
+route("GET", "/api/buckets", async () => buckets.snapshot());
+route("POST", "/api/buckets", async (req) => buckets.create(await body(req)));
+route("POST", "/api/buckets/focus", async (req) => {
+  const b = await body(req);
+  return buckets.setFocus(b.bucket ?? b.name ?? null);
+});
+route("POST", "/api/buckets/suggest", async (req) => {
+  const b = await body(req);
+  return { suggestion: buckets.suggest(b.prompt ?? b.text ?? "") };
+});
+route("POST", "/api/buckets/([\\w-]+)", async (req, res, sess, [bid]) => buckets.update(bid, await body(req)));
+route("POST", "/api/buckets/([\\w-]+)/delete", async (req, res, sess, [bid]) => buckets.remove(bid));
+route("POST", "/api/buckets/([\\w-]+)/subtopics", async (req, res, sess, [bid]) => {
+  const b = await body(req);
+  return buckets.addSubtopic(bid, b.name ?? b.subtopic, b.status);
+});
+route("POST", "/api/buckets/([\\w-]+)/status", async (req, res, sess, [bid]) => {
+  const b = await body(req);
+  return buckets.setSubtopicStatus(bid, b.subtopic ?? b.name, b.status);
+});
+route("POST", "/api/buckets/([\\w-]+)/unknowns", async (req, res, sess, [bid]) => {
+  const b = await body(req);
+  return buckets.addUnknown(bid, b.text ?? b.unknown);
+});
+route("POST", "/api/buckets/([\\w-]+)/unknowns/([\\w-]+)/delete", async (req, res, sess, [bid, uid]) => buckets.removeUnknown(bid, uid));
+route("POST", "/api/buckets/([\\w-]+)/tasks", async (req, res, sess, [bid]) => {
+  const b = await body(req);
+  return buckets.addTask(bid, b.text ?? b.task, !!b.done);
+});
+route("POST", "/api/buckets/([\\w-]+)/tasks/([\\w-]+)", async (req, res, sess, [bid, tid]) => {
+  const b = await body(req);
+  return buckets.setTaskDone(bid, tid, b.done);
+});
+route("GET", "/api/buckets/plan", async () => buckets.plan());
+route("POST", "/api/buckets/([\\w-]+)/check", async (req, res, sess, [bid]) => {
+  if (limited("bcheck", sess.key, 10, 60_000)) throw new HttpError(429, "slow down a little");
+  const b = await body(req);
+  return startBucketCheck(sess, { bucketId: bid, subtopic: b.subtopic ?? b.name ?? null, mode: b.mode === "crosscheck" ? "crosscheck" : "check" });
+}, { ai: true });
+route("POST", "/api/buckets/([\\w-]+)/crosscheck", async (req, res, sess, [bid]) => {
+  if (limited("bcheck", sess.key, 10, 60_000)) throw new HttpError(429, "slow down a little");
+  return startBucketCheck(sess, { bucketId: bid, mode: "crosscheck" });
+}, { ai: true });
+route("GET", "/api/buckets/checks/([\\w-]+)", async (req, res, sess, [cid]) => ({ check: buckets.getCheck(cid) }));
+route("POST", "/api/buckets/checks/([\\w-]+)/grade", async (req, res, sess, [cid]) => {
+  if (limited("bgrade", sess.key, 10, 60_000)) throw new HttpError(429, "slow down a little");
+  const b = await body(req);
+  return gradeBucketCheck(sess, cid, b);
+}, { ai: true });
+
+async function startBucketCheck(sess, { bucketId, subtopic = null, mode = "check" }) {
+  const snap = await buckets.snapshot();
+  const bucket = snap.buckets.find((x) => x.id === bucketId) || buckets.findBucket(bucketId);
+  if (!bucket) throw new HttpError(400, "bucket not found");
+  let targets;
+  if (subtopic) {
+    const s = (bucket.subtopics || []).find((t) => t.id === subtopic || t.name.toLowerCase() === String(subtopic).toLowerCase() || t.name.toLowerCase().includes(String(subtopic).toLowerCase()));
+    // Also allow matching by bucket name alone for "check me on recursion"
+    if (s) targets = [s];
+    else {
+      const asBucket = buckets.findBucket(subtopic);
+      if (asBucket && asBucket.id !== bucket.id) {
+        return startBucketCheck(sess, { bucketId: asBucket.id, mode });
+      }
+      targets = mode === "crosscheck" ? buckets.pickUnverified(bucket, 4) : buckets.pickUnverified(bucket, 1);
+    }
+  } else {
+    targets = mode === "crosscheck" ? buckets.pickUnverified(bucket, 4) : buckets.pickUnverified(bucket, 1);
+  }
+  if (!targets?.length) throw new HttpError(400, "nothing to check in that bucket");
+  const plan = await llm.chat([
+    { role: "system", content: P.BUCKET_CHECK_SYSTEM },
+    { role: "user", content: P.bucketCheckUser({ bucket: bucket.name, subtopics: targets.map((t) => t.name), mode }) },
+  ], { json: true, maxTokens: 900, temperature: 0.3 });
+  const questions = (plan?.questions || []).slice(0, 5).map((q, i) => ({
+    text: String(q.text || q),
+    subtopicId: targets[i % targets.length].id,
+  }));
+  if (questions.length < 2) throw new HttpError(502, "could not generate diagnostic questions; try again");
+  const started = await buckets.startCheck({
+    bucketRef: bucket.id,
+    mode,
+    questions,
+    subtopicIds: targets.map((t) => t.id),
+  });
+  return {
+    reply: mode === "crosscheck"
+      ? `Cross-check for ${bucket.name}: answer these in the buckets view or send answers to grade.`
+      : `Check on ${bucket.name}: answer these, then grade.`,
+    check: started.check,
+    buckets: true,
+  };
+}
+
+async function gradeBucketCheck(sess, checkId, bodyIn) {
+  const check = buckets.getCheck(checkId);
+  const snap = await buckets.snapshot();
+  const bucket = snap.buckets.find((x) => x.id === check.bucketId);
+  if (!bucket) throw new HttpError(400, "bucket not found");
+  const answers = Array.isArray(bodyIn.answers)
+    ? bodyIn.answers
+    : check.questions.map((q) => bodyIn.answers?.[q.id] ?? bodyIn.answers?.[String(q.n)] ?? "");
+  const subtopics = bucket.subtopics.filter((s) => check.subtopicIds.includes(s.id));
+  const enriched = check.questions.map((q) => ({
+    ...q,
+    subtopicName: subtopics.find((s) => s.id === q.subtopicId)?.name || q.subtopicId,
+  }));
+  const grade = await llm.chat([
+    { role: "system", content: P.BUCKET_GRADE_SYSTEM },
+    { role: "user", content: P.bucketGradeUser({ bucket: bucket.name, subtopics, questions: enriched, answers }) },
+  ], { json: true, maxTokens: 1200, temperature: 0 });
+  if (!grade?.subtopics) throw new HttpError(502, "grading failed; try again");
+  // Map name keys to ids when model returns names
+  const mapped = {};
+  for (const [k, v] of Object.entries(grade.subtopics)) {
+    const hit = subtopics.find((s) => s.id === k || s.name === k || s.name.toLowerCase() === String(k).toLowerCase());
+    mapped[hit?.id || k] = v;
+  }
+  grade.subtopics = mapped;
+  const out = await buckets.applyCheckGrade(checkId, grade);
+  return { reply: grade.summary || "Graded.", check: out.check, snapshot: out.snapshot, buckets: true };
+}
+
+
 async function listing() {
   const titles = new Map();
   for (const t of (await readManifest()).tabs) for (const it of t.items) titles.set(`${t.name}/${it.path}`, it.title);
@@ -683,7 +817,7 @@ async function listing() {
   }
   return lines.join("\n");
 }
-const ORGANIZE = /\b(open|show|move|mv|rename|delete|remove|trash|folders?|dir|directory|put|into|tag|retag|topic|find|search|list|where|undo|create|make|mkdir|chat|this|that|it|file|files|pdf|notes|my|got|have|explainers?|lessons?|stuff|anything|any|history|stuck|confus\w*|struggl\w*)\b|\bdon'?t get\b|\//i;
+const ORGANIZE = /\b(open|show|move|mv|rename|delete|remove|trash|folders?|dir|directory|put|into|tag|retag|topic|find|search|list|where|undo|create|make|mkdir|chat|this|that|it|file|files|pdf|notes|my|got|have|explainers?|lessons?|stuff|anything|any|history|stuck|confus\w*|struggl\w*|bucket|buckets|focus|subtopic|unknown|shaky|solid)\b|\bdon'?t get\b|\//i;
 
 async function fileFor(p) {
   const rel = files.norm(String(p ?? ""));
@@ -758,6 +892,10 @@ async function execute(plan, sess, text, open = null) {
         out.chat = { file: rel, question: clip(a.question ?? "", 1000), title: await describe(rel) };
       } else if (a.op === "explain") {
         Object.assign(out, await requestExplainer(sess, a.prompt ?? text, { folder: a.folder, context: openCtx, ...(JUST.test(text) ? { check: false } : {}) }));
+        {
+          const sug = buckets.suggest(a.prompt ?? text);
+          if (sug) out.bucketSuggestion = sug;
+        }
       } else if (a.op === "history") {
         const r = await requestHistory(sess, { path: a.path || null, topic: a.topic, stuck: a.stuck ?? text });
         out.lesson = r.lesson;
@@ -780,6 +918,40 @@ route("POST", "/api/command", async (req, res, sess) => {
   let open = null;
   try { if (b.open) open = files.norm(String(b.open)); } catch {}
   if (/^(u|undo)$/i.test(text)) return undoBatch(null);
+  {
+    const parsed = parseBucketCommand(text);
+    if (parsed) {
+      if (parsed.op === "bucket_open") {
+        return { reply: parsed.bucket ? `Opening the ${parsed.bucket} bucket.` : "Opening buckets.", lines: [], changed: false, bucketOpen: parsed.bucket ?? true };
+      }
+      if (parsed.op === "bucket_check" || parsed.op === "bucket_crosscheck") {
+        const hit = buckets.findBucket(parsed.bucket) || buckets.findBucket(parsed.subtopic);
+        if (!hit) return { reply: `No bucket matching "${parsed.bucket}".`, errors: [`no bucket matching "${parsed.bucket}"`], lines: [], changed: false };
+        let bucketId = hit.id;
+        let sub = parsed.subtopic || null;
+        if (parsed.op === "bucket_check" && parsed.subtopic) {
+          const snap = await buckets.snapshot();
+          for (const cand of snap.buckets) {
+            if (cand.subtopics.some((s) => s.name.toLowerCase() === String(parsed.subtopic).toLowerCase() || s.name.toLowerCase().includes(String(parsed.subtopic).toLowerCase()))) {
+              bucketId = cand.id;
+              sub = parsed.subtopic;
+              break;
+            }
+          }
+          const direct = buckets.findBucket(parsed.subtopic);
+          if (direct) { bucketId = direct.id; sub = null; }
+        }
+        return startBucketCheck(sess, { bucketId, subtopic: sub, mode: parsed.op === "bucket_crosscheck" ? "crosscheck" : "check" });
+      }
+      try {
+        const result = await buckets.applyCommand(parsed.op, parsed);
+        const label = parsed.op.replace(/^bucket_/, "").replace(/_/g, " ");
+        return { reply: `Done (${label}).`, lines: [`bucket: ${label}`], changed: true, buckets: true, ...(result?.pendingCheck ? { pendingCheck: result.pendingCheck } : {}) };
+      } catch (e) {
+        return { reply: e.message || "bucket command failed", errors: [e.message || String(e)], lines: [], changed: false };
+      }
+    }
+  }
   // A plain learning question goes straight to an explainer (no routing call).
   if (!ORGANIZE.test(text.replace(JUST, "")) && !b.route) {
     return execute({ reply: "", actions: [{ op: "explain", prompt: text }] }, sess, text, open);

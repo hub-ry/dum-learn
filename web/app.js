@@ -280,6 +280,13 @@ function openItem(item, { fromHash = false } = {}) {
 }
 
 function applyHash() {
+  if (/^#\/buckets\/?$/i.test(location.hash)) {
+    window.learnBuckets?.show?.({ push: false });
+    return true;
+  }
+  if (document.body.classList.contains("bk-library") && window.learnBuckets) {
+    window.learnBuckets.hide();
+  }
   const pm = location.hash.match(/[?&]page=(\d{1,4})$/);
   const m = location.hash.replace(/[?&]page=\d{1,4}$/, "").match(/^#\/([^/]+)(?:\/(.+))?$/);
   if (!m) return false;
@@ -756,9 +763,15 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "x") { e.preventDefault(); location.href = "/explore/"; return; }
   // c: chat; on a page written this session, a follow-up scoped to that page.
   if (e.key === "c" && window.learnSide && document.body.classList.contains("has-study")) { e.preventDefault(); (window.learnSide.cKey ?? window.learnSide.toggle)(); return; }
-  if (e.key === "b" && openKey()) {
-    const info = window.learnStudy?.lessonAt?.(openKey());
+  if (e.key === "b") {
+    const info = openKey() ? window.learnStudy?.lessonAt?.(openKey()) : null;
     if (info?.parent) { e.preventDefault(); window.learnStudy.backUp(info.lesson); return; }
+    if (window.learnBuckets) {
+      e.preventDefault();
+      if (window.learnBuckets.isOpen()) window.learnBuckets.hide();
+      else window.learnBuckets.show();
+      return;
+    }
   }
   const inView = state.focus === "view";
   const isPdf = state.open?.kind === "pdf" && !state.showSource;
@@ -939,3 +952,5 @@ async function boot() {
 }
 
 boot();
+
+document.getElementById("buckets-btn")?.addEventListener("click", () => window.learnBuckets?.show?.());

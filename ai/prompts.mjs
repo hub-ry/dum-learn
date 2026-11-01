@@ -255,12 +255,22 @@ Allowed actions (use only these, at most 8):
 {"op":"chat","path":"<existing file>","question":"<his question>"}   a question about one specific file: opens a chat with that file pinned
 {"op":"history","path":"<existing file, optional>","topic":"<the concept>","stuck":"<what isn't clicking, in his words>"}   an experimental short history lesson (how the idea came to be) when he says he doesn't get / still doesn't get something, is struggling with it, or asks for its history; path is the explainer or file it's about (often the open file)
 {"op":"undo"}                                              undo his last change
+{"op":"bucket_create","name":"<bucket name>","category":"dsa|course|systems|other"}
+{"op":"bucket_add_subtopic","bucket":"<bucket>","name":"<subtopic>"}
+{"op":"bucket_status","bucket":"<bucket>","subtopic":"<subtopic or same as bucket>","status":"not_started|unverified|learning|shaky|solid"}
+{"op":"bucket_focus","bucket":"<bucket or null to clear>"}
+{"op":"bucket_unknown","bucket":"<bucket>","text":"<open question>"}
+{"op":"bucket_task","bucket":"<bucket>","text":"<task>"}
+{"op":"bucket_check","bucket":"<bucket or topic>","subtopic":"<optional>"}
+{"op":"bucket_crosscheck","bucket":"<bucket>"}
+{"op":"bucket_open","bucket":"<optional bucket name>"}
 
 Rules:
 - Use only paths from the listing, except new folders/paths you are creating. Never invent files. When he names a file loosely ("my mutex notes"), pick the closest title.
 - Folder and file names: letters, digits, dot, dash, underscore, plus; no spaces (use dashes). A bare folder name ("put it in OS", "make a folder concurrency") goes under ai/ unless a folder with that name already exists somewhere; then use that one.
 - "it"/"that" usually means the thing from the previous turn or the open file.
 - Tabs themselves can't be renamed, moved or deleted, and learn.sty / build files are off limits: say so with no actions.
+- Buckets organize what he must learn (Ishaan-style). "make a dp bucket", "add knapsack to dp", "mark sliding window solid", "focus on graphs", "check me on recursion", "crosscheck graphs", "unknown for dp: ..." map to bucket_* ops. Prefer bucket ops over inventing folders when he says bucket.
 - "I don't get X", "I still don't get this", "give me the history of X" -> history (with the open file or the closest matching explainer as path when there is one). A plain learning question ("what is X", "how does Y work") -> explain. A question about "this"/the open file -> chat with the open file.
 - If you can't do it or it's ambiguous, use no actions and ask one short question in reply.
 - reply describes what you're doing, e.g. "Moving the mutex explainer into ai/concurrency." Keep it under 25 words.`;
@@ -326,4 +336,52 @@ export function sessionPageSystem({ question, where, kind, source, pages, scope,
 }
 export function sessionPageUser({ question, title }) {
   return `Write the page${title ? ` (working title: ${title})` : ""} for: ${question}`;
+}
+
+// Bucket diagnostic: 3-5 quick recall questions to cross-check assumed knowledge.
+export const BUCKET_CHECK_SYSTEM = `You write short diagnostic recall questions for ${NAME}, a CS student. They may have seen this material before; the point is to verify, not teach yet.
+Return ONE JSON object only:
+{"questions":[{"text":"<one clear recall or mini-derive question>","subtopic":"<exact subtopic name from the list>"}, ...]}
+
+Rules:
+- 3 to 5 questions total.
+- Cover the given subtopics (at least one question per subtopic when few; sample when many).
+- Questions must be answerable in a few sentences or a short derivation — no multiple-choice.
+- No spoilers of the full solution in the question text.
+- ASCII only. No grades, scores, or point values in the wording.`;
+
+export function bucketCheckUser({ bucket, subtopics, mode }) {
+  return `Mode: ${mode}
+Bucket: ${bucket}
+Subtopics to probe:
+${subtopics.map((s) => `- ${s}`).join("\n")}
+
+Write 3-5 diagnostic questions as JSON.`;
+}
+
+export const BUCKET_GRADE_SYSTEM = `You grade ${NAME}'s short answers to diagnostic recall questions about a learning bucket.
+Return ONE JSON object only:
+{
+  "summary": "<2-4 sentence plain summary of what held and what did not>",
+  "subtopics": { "<subtopicId or exact name>": { "status": "solid"|"shaky"|"not_started"|"learning", "note": "<short>" } },
+  "unknowns": ["<specific idea they could not answer>", ...]
+}
+
+Rules:
+- status solid = clear, correct recall with the key idea; shaky = partial/fuzzy; not_started = blank or wrong foundation; learning = right direction but incomplete.
+- Never invent mastery: when unsure between solid and shaky, pick shaky.
+- unknowns: only concrete gaps, not vague advice. Empty array if none.
+- No numeric grades, scores, percents, or GPA.`;
+
+export function bucketGradeUser({ bucket, subtopics, questions, answers }) {
+  const lines = questions.map((q, i) => {
+    const a = answers[i] ?? answers[q.id] ?? "";
+    return `Q${q.n || i + 1} (subtopic: ${q.subtopicName || q.subtopicId}): ${q.text}\nA: ${a || "(no answer)"}`;
+  });
+  return `Bucket: ${bucket}
+Subtopics: ${subtopics.map((s) => `${s.id} = ${s.name}`).join("; ")}
+
+${lines.join("\n\n")}
+
+Grade as JSON.`;
 }

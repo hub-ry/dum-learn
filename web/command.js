@@ -27,7 +27,7 @@ function build() {
   ui.state = el("span", { class: "cmd-state muted small" });
   ui.form = el("form", { class: "cmd-line", onsubmit: (e) => { e.preventDefault(); submit(); } },
     el("span", { class: "cmd-prompt", "aria-hidden": "true" }, ":"), ui.input, ui.state);
-  ui.hint = el("div", { class: "cmd-hint muted small" }, "enter run · esc close · \u2191 history · try \u201cmake a folder concurrency\u201d, \u201cwhat have I got on hashing\u201d");
+  ui.hint = el("div", { class: "cmd-hint muted small" }, "enter run · esc close · \u2191 history · try \u201cmake a dp bucket\u201d, \u201cfocus on graphs\u201d, \u201ccheck me on recursion\u201d");
   ui.root = el("div", { id: "cmd", class: "cmd", hidden: true, role: "dialog", "aria-label": "command" }, el("div", { class: "cmd-card" }, ui.out, ui.form, ui.hint));
   document.body.append(ui.root);
   ui.input.addEventListener("keydown", (e) => {
@@ -104,6 +104,16 @@ async function apply(r) {
   if (r.changed) {
     await window.learnApp?.reload({ moves: r.moves ?? [] });
     window.learnStudy?.refresh?.();
+    window.learnBuckets?.refresh?.();
+  }
+  if (r.buckets || r.check) window.learnBuckets?.refresh?.();
+  if (r.bucketOpen != null) {
+    close();
+    window.learnBuckets?.show?.(typeof r.bucketOpen === "string" ? { focusName: r.bucketOpen } : undefined);
+  }
+  if (r.check) {
+    close();
+    window.learnBuckets?.showCheck?.(r.check);
   }
   if (r.open) { close(); window.learnApp?.openPath(r.open.tab, r.open.path); }
   else if (r.chat) {

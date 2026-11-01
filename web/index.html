@@ -8,10 +8,13 @@
 <title>learn</title>
 <script src="/theme.js"></script>
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/leetcode.css">
+<link rel="stylesheet" href="/buckets.css">
 <script type="module" src="/time.js"></script>
 <script type="module" src="/app.js"></script>
 <script type="module" src="/study.js"></script>
 <script type="module" src="/command.js"></script>
+<script type="module" src="/buckets.js"></script>
 <script type="module" src="/infinite.js"></script>
 <script type="module" src="/sidechat.js"></script>
 </head>
@@ -19,6 +22,7 @@
 <header class="bar top">
   <span class="brand">learn</span>
   <button id="study-btn" class="tab study-tab" type="button" aria-selected="false" hidden><span class="num">a:</span>learn</button>
+  <button id="buckets-btn" class="tab buckets-tab" type="button" aria-selected="false" title="Buckets map (Ishaan-style)"><span class="num">b:</span>buckets</button>
   <a id="explore-link" class="tab explore-tab" href="/explore/" title="Chat (DeepSeek)"><span class="num">x:</span>chat</a>
   <nav id="tabs" class="tabs" aria-label="Tabs"></nav>
   <button id="toggle-list" class="key-btn narrow-only" type="button" aria-label="Toggle file list">files</button>
@@ -29,6 +33,7 @@
 </header>
 
 <main id="files" class="panes">
+  <section id="bk-library" class="lc-library-pane bk-library-pane" aria-label="Buckets" hidden></section>
   <section id="list-pane" class="pane" aria-label="Files">
     <h2 class="pane-title" id="list-title">files</h2>
     <ul id="list" class="list" role="listbox"></ul>
@@ -107,6 +112,7 @@
       <tr><td><kbd>x</kbd></td><td>chat (passcode)</td></tr>
       <tr><td><kbd>T</kbd></td><td>light / dark theme</td></tr>
       <tr><td><kbd>?</kbd> <kbd>esc</kbd></td><td>show / hide this help</td></tr>
+      <tr><td><kbd>b</kbd></td><td>open buckets (Ishaan-style map); or <kbd>:</kbd> “buckets”, “check me on recursion”, “crosscheck graphs”</td></tr>
       <tr class="study-only"><td><kbd>:</kbd> <kbd>/</kbd></td><td>command: "make a folder os", "move the mutex explainer into concurrency", "open my mutex notes", "what have I got on hashing", "explain semaphores, put it in os" (deletes ask first; <kbd>u</kbd> undoes)</td></tr>
       <tr class="study-only"><td><kbd>b</kbd></td><td>on a prerequisite explainer: back up to the one it branched from</td></tr>
       <tr class="study-only"><td><kbd>h</kbd></td><td>in the viewer or learn list: still don't get it? a short history of how the idea came to be (experimental)</td></tr>
