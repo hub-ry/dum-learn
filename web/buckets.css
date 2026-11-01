@@ -18,14 +18,21 @@ body.bk-library #chat-btn,
 body.bk-library #sc-handle { display: none; }
 body.bk-library .buckets-tab { color: var(--fg); font-weight: 600; }
 /* Content folder tabs must not look selected while Buckets is open */
+body.bk-library #tabs .tab,
 body.bk-library #tabs .tab[aria-selected="true"] {
-  color: var(--muted);
-  background: none;
-  text-decoration: none;
-  font-weight: 400;
+  color: #555 !important;
+  background: none !important;
+  text-decoration: none !important;
+  font-weight: 400 !important;
 }
 body.bk-library #tabs .tab[aria-selected="true"]::before,
-body.bk-library #tabs .tab[aria-selected="true"]::after { content: none; }
+body.bk-library #tabs .tab[aria-selected="true"]::after,
+body.bk-library #tabs .tab::before,
+body.bk-library #tabs .tab::after { content: none !important; }
+:root[data-theme="dark"] body.bk-library #tabs .tab,
+:root[data-theme="dark"] body.bk-library #tabs .tab[aria-selected="true"] {
+  color: #a8adb6 !important;
+}
 
 .bk-library-pane[hidden] { display: none !important; }
 body.bk-library #bk-library {
