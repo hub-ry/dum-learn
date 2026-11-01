@@ -41,12 +41,13 @@ const items = () => state.tabs[state.tab]?.items ?? [];
 // ---------------------------------------------------------------- render ---
 
 function renderTabs() {
+  const bucketsOpen = document.body.classList.contains("bk-library");
   els.tabs.replaceChildren(...state.tabs.map((tab, i) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "tab";
     b.setAttribute("role", "tab");
-    b.setAttribute("aria-selected", String(i === state.tab));
+    b.setAttribute("aria-selected", String(!bucketsOpen && i === state.tab));
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = i < 9 ? `${i + 1}:` : "";
@@ -154,14 +155,15 @@ function renderList() {
 }
 
 function renderChrome() {
+  const library = (state.tabs[state.tab]?.name === "leetcode" && document.body.classList.contains("lc-library")) || document.body.classList.contains("bk-library");
   els.listPane.classList.toggle("focused", state.focus === "list");
   els.viewPane.classList.toggle("focused", state.focus === "view");
-  els.mode.textContent = state.focus === "list" ? "LIST" : "VIEW";
-  els.mode.classList.toggle("view", state.focus === "view");
+  els.mode.textContent = library ? "LIBRARY" : state.focus === "list" ? "LIST" : "VIEW";
+  els.mode.classList.toggle("view", !library && state.focus === "view");
 
   const parts = [];
   const item = state.open;
-  if (item) {
+  if (item && !library) {
     parts.push(`${state.tabs[state.tab]?.name}/${state.showSource ? item.path : item.path.replace(/\.tex$/, ".pdf")}`);
     if (item.kind === "pdf" && !state.showSource && state.pages.length) {
       const cur = state.pages[state.page - 1];
@@ -172,14 +174,14 @@ function renderChrome() {
   els.status.textContent = parts.join("  \u2502  ");
 
   const hint = (k, label) => `<b>${k}</b> ${label}`;
-  const hints = state.focus === "list"
+  const hints = library ? [hint("/", "search"), hint("1-9", "tab"), hint("?", "help")] : state.focus === "list"
     ? [hint("j/k", "move"), hint("enter", "open"), hint("1-9", "tab"), hint("?", "help")]
-    : [hint("j/k", "scroll"), hint("n/p", "page"), hint("+/-", "zoom"), ...(document.documentElement.dataset.theme === "light" ? [] : [hint("i", "invert")]), ...(document.body.classList.contains("has-study") ? [hint("c", window.learnSide?.isOpen() ? "hide chat" : "chat"), hint("h", "history"), hint("tab", "list")] : [hint("h", "list")]), hint("?", "help")];
+    : [hint("j/k", "scroll"), hint("n/p", "page"), hint("+/-", "zoom"), ...(document.documentElement.dataset.theme === "light" ? [] : [hint("i", "invert")]), ...(state.tabs[state.tab]?.name === "leetcode" ? [hint("c", window.learnSide?.isOpen() ? "hide chat" : "chat"), hint("h", "library")] : document.body.classList.contains("has-study") ? [hint("c", window.learnSide?.isOpen() ? "hide chat" : "chat"), hint("h", "history"), hint("tab", "list")] : [hint("h", "list")]), hint("?", "help")];
   els.hints.innerHTML = hints.join("  ");
   // The side chat (web/sidechat.js) follows the page you're on.
   document.dispatchEvent(new CustomEvent("learn:page"));
   const histBtn = $("hist-btn");
-  if (histBtn) histBtn.hidden = !(document.body.classList.contains("has-study") && openKey());
+  if (histBtn) histBtn.hidden = !(document.body.classList.contains("has-study") && openKey()) || state.tabs[state.tab]?.name === "leetcode";
   renderBranchBar();
 }
 
@@ -239,6 +241,7 @@ function renderBranchBar() {
 
 function setTab(i) {
   if (i < 0 || i >= state.tabs.length) return;
+  if (document.body.classList.contains("bk-library")) window.learnBuckets?.hide?.();
   if (i !== state.tab) {
     state.tab = i;
     state.sel = 0;
@@ -246,9 +249,14 @@ function setTab(i) {
   renderTabs();
   renderList();
   renderChrome();
+  document.dispatchEvent(new CustomEvent("learn:tab", { detail: { name: state.tabs[state.tab]?.name } }));
 }
 
 function setFocus(focus) {
+  if (focus === "list" && state.tabs[state.tab]?.name === "leetcode" && window.learnLeetcode) {
+    window.learnLeetcode.show();
+    return;
+  }
   state.focus = focus;
   if (focus === "view") els.viewer.focus({ preventScroll: true });
   renderChrome();
@@ -269,7 +277,10 @@ function openItem(item, { fromHash = false } = {}) {
   if (!fromHash && location.hash !== itemHash(item)) {
     history.pushState(null, "", itemHash(item));
   }
-  if (state.open === item) return;
+  if (state.open === item) {
+    if (state.openTab === "leetcode") document.dispatchEvent(new CustomEvent("learn:open"));
+    return;
+  }
   state.open = item;
   state.openTab = state.tabs[state.tab]?.name;
   state.showSource = false;
@@ -451,7 +462,7 @@ async function showPdf(item) {
   notice("loading\u2026");
   let doc;
   try {
-    doc = await pdfjs.getDocument({ url: `/${item.src}`, isEvalSupported: false }).promise;
+    doc = await pdfjs.getDocument({ url: `/${item.src}?v=${encodeURIComponent(item.updated)}`, isEvalSupported: false }).promise;
   } catch (err) {
     if (token === state.loadToken) notice(`could not open PDF: ${err.message}`, "notice error");
     return;
@@ -759,10 +770,11 @@ document.addEventListener("keydown", (e) => {
   }
   // Study mode (web/study.js) owns the keyboard while it is open, and typing
   // in a text field is never a shortcut.
-  if (document.body.classList.contains("studying") || e.target.closest?.("input, textarea, select")) return;
+  if (document.body.classList.contains("studying") || e.target.closest?.("input, textarea, select, dialog")) return;
+  if ((document.body.classList.contains("lc-library") || document.body.classList.contains("bk-library")) && !/^[1-9?bTB]$/.test(e.key)) return;
   if (e.key === "x") { e.preventDefault(); location.href = "/explore/"; return; }
   // c: chat; on a page written this session, a follow-up scoped to that page.
-  if (e.key === "c" && window.learnSide && document.body.classList.contains("has-study")) { e.preventDefault(); (window.learnSide.cKey ?? window.learnSide.toggle)(); return; }
+  if (e.key === "c" && window.learnSide && (document.body.classList.contains("has-study") || state.tabs[state.tab]?.name === "leetcode")) { e.preventDefault(); (window.learnSide.cKey ?? window.learnSide.toggle)(); return; }
   if (e.key === "b") {
     const info = openKey() ? window.learnStudy?.lessonAt?.(openKey()) : null;
     if (info?.parent) { e.preventDefault(); window.learnStudy.backUp(info.lesson); return; }
@@ -781,6 +793,7 @@ document.addEventListener("keydown", (e) => {
     case "Tab": setFocus(inView ? "list" : "view"); break;
     case "h": case "ArrowLeft": {
       // In the viewer, h asks for an (experimental) history lesson on the
+      if (inView && state.tabs[state.tab]?.name === "leetcode") { setFocus("list"); break; }
       // open file when unlocked. In the list: fold the folder, or jump up.
       const r = rows()[state.sel];
       if (inView && e.key === "h" && document.body.classList.contains("has-study") && openKey()) window.learnStudy?.history?.(openKey());
@@ -874,10 +887,11 @@ async function loadManifest() {
 // "<tab>/<path>" of the open file, used for time tracking (web/time.js) and
 // for the side chat (web/sidechat.js), which pins the file as context.
 const openKey = () => (state.open && state.openTab ? `${state.openTab}/${state.open.path}` : null);
-window.learnTimeKey = () => (!document.body.classList.contains("studying") && openKey() ? `file:${openKey()}` : null);
+window.learnTimeKey = () => (!document.body.classList.contains("studying") && !document.body.classList.contains("lc-library") && !document.body.classList.contains("bk-library") && openKey() ? `file:${openKey()}` : null);
 
 window.learnApp = {
   setTab,
+  currentTab: () => state.tabs[state.tab]?.name ?? null,
   renderChrome: () => { renderTabs(); renderChrome(); },
   async openPath(tabName, p) {
     window.learnStudy?.leave();
@@ -954,3 +968,5 @@ async function boot() {
 boot();
 
 document.getElementById("buckets-btn")?.addEventListener("click", () => window.learnBuckets?.show?.());
+
+

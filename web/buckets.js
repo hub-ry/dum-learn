@@ -73,7 +73,7 @@ const resultsLabel = h("h2", { id: "bk-results-label" }, "Buckets");
 const table = h("table", { class: "lc-table bk-table", "aria-labelledby": "bk-results-label" },
   h("thead", {}, h("tr", {},
     h("th", {}, "Bucket"), h("th", {}, "Category"), h("th", {}, "Status"),
-    h("th", {}, "Progress"), h("th", {}, "Links"), h("th", {}, "Unknowns"), h("th", {}, "Actions"))),
+    h("th", {}, "Progress"), h("th", {}, "Links"), h("th", {}, "Focus"), h("th", {}, "Actions"))),
   rows);
 
 const detail = h("div", { class: "bk-detail", hidden: true });
@@ -167,7 +167,7 @@ function renderResults() {
       h("td", {}, progressBar(b.progress?.percent ?? 0),
         h("div", { class: "lc-muted" }, `${b.progress?.subtopicsSolid ?? 0}/${b.progress?.subtopicsTotal ?? 0} solid`)),
       h("td", {}, linkText),
-      h("td", {}, String(b.unknowns?.length ?? 0)),
+      h("td", {}, b.focus ? "★ focus" : "—"),
       h("td", {}, actions),
     ));
   }
@@ -421,6 +421,7 @@ function show(opts = {}) {
   root.hidden = false;
   const btn = document.getElementById("buckets-btn");
   if (btn) btn.setAttribute("aria-selected", "true");
+  document.querySelectorAll("#tabs .tab").forEach((el) => el.setAttribute("aria-selected", "false"));
   if (opts.focusName) {
     state.query = "";
     // select after load
@@ -441,7 +442,7 @@ function hide() {
   const btn = document.getElementById("buckets-btn");
   if (btn) btn.setAttribute("aria-selected", "false");
   if (location.hash === "#/buckets") history.pushState(null, "", location.pathname);
-  app()?.renderChrome?.();
+  app()?.renderChrome?.(); // restores content-tab aria-selected
 }
 function showCheck(check) {
   show();
@@ -452,6 +453,7 @@ function showCheck(check) {
 }
 
 document.addEventListener("learn:auth", () => { state.authed = true; if (!root.hidden) load(); });
+document.addEventListener("learn:tab", () => { if (!root.hidden) hide(); });
 document.addEventListener("keydown", (event) => {
   if (root.hidden || document.body.classList.contains("studying") || !document.getElementById("help").hidden) return;
   if (event.ctrlKey || event.metaKey || event.altKey) return;

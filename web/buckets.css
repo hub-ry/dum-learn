@@ -1,16 +1,68 @@
-/* Buckets library reuses .lc-library-pane / .lc-* chrome; body.bk-library mirrors lc-library. */
+/* Buckets library reuses .lc-library-pane / .lc-* chrome; body.bk-active mirrors lc-active. */
+
+/* Full-width main pane — same grid collapse leetcode uses (without this, #bk-library
+   lands in the ~280px list column of .panes). */
+body.bk-active #files {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
 body.bk-library #list-pane,
-body.bk-library #view-pane { display: none; }
+body.bk-library #view-pane,
+body.bk-library #toggle-list,
+body.bk-library #lc-library { display: none !important; }
 body.bk-library #chat-btn,
 body.bk-library #sc-handle { display: none; }
 body.bk-library .buckets-tab { color: var(--fg); font-weight: 600; }
-.bk-library-pane[hidden] { display: none; }
+/* Content folder tabs must not look selected while Buckets is open */
+body.bk-library #tabs .tab[aria-selected="true"] {
+  color: var(--muted);
+  background: none;
+  text-decoration: none;
+  font-weight: 400;
+}
+body.bk-library #tabs .tab[aria-selected="true"]::before,
+body.bk-library #tabs .tab[aria-selected="true"]::after { content: none; }
+
+.bk-library-pane[hidden] { display: none !important; }
+body.bk-library #bk-library {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+/* Top/bottom chrome aligned with leetcode database look (keep theme toggle). */
+body.bk-active .top { min-height: 58px; padding: 10px 24px; gap: 16px; border-bottom: 1px solid var(--border); background: #fafafa; }
+body.bk-active .brand { padding: 0; background: none; color: var(--fg); font-size: 18px; }
+body.bk-active .tabs { gap: 4px; min-width: 0; }
+body.bk-active .tab { padding: 7px 10px; border-radius: 0; color: #555; }
+body.bk-active .buckets-tab[aria-selected="true"] {
+  background: none; color: #111; text-decoration: underline; text-decoration-color: var(--accent);
+  text-underline-offset: 7px; font-weight: 600;
+}
+body.bk-active .tab .num { display: none; }
+body.bk-active .key-btn { color: #555; padding: 6px; }
+body.bk-active .bottom { min-height: 36px; padding: 6px 24px; gap: 16px; background: #fafafa; font-size: 12px; }
+body.bk-active .mode, body.bk-active .mode.view, body.bk-active .mode.study {
+  background: none; color: #555; padding: 0; font-weight: 400;
+}
 
 .bk-progress {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 110px;
+  min-width: 88px;
+  max-width: 140px;
   height: 18px;
   background: #e8e9eb;
   border-radius: 3px;
@@ -58,6 +110,56 @@ body.bk-library .buckets-tab { color: var(--fg); font-weight: 600; }
 .lc-text-button:hover { text-decoration: underline; }
 .bk-table .lc-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* Fit columns at 1280px without forcing a clipped left strip.
+   Keep a modest min-width + overflow-x auto only as a last resort on narrow. */
+.bk-library-pane .lc-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid #dedfe2;
+  border-radius: 4px;
+}
+.bk-library-pane .bk-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+.bk-library-pane .bk-table th,
+.bk-library-pane .bk-table td {
+  padding: 10px 12px;
+  vertical-align: top;
+}
+.bk-library-pane .bk-table .lc-table-title { min-width: 140px; max-width: 260px; }
+.bk-library-pane .bk-table th:nth-child(2),
+.bk-library-pane .bk-table td:nth-child(2) { white-space: nowrap; } /* Category */
+.bk-library-pane .bk-table th:nth-child(6),
+.bk-library-pane .bk-table td:nth-child(6) { white-space: nowrap; text-align: center; } /* Focus */
+.bk-library-pane .bk-table th:last-child,
+.bk-library-pane .bk-table td:last-child { min-width: 168px; }
+.bk-library-pane .lc-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(140px, 0.7fr)) auto;
+  gap: 12px 16px;
+  align-items: end;
+  margin: 12px 0 8px;
+}
+.bk-library-pane .lc-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+@media (max-width: 900px) {
+  body.bk-active .top { padding: 10px 16px; flex-wrap: wrap; }
+  body.bk-active .bottom { padding: 6px 16px; }
+  body.bk-library #bk-library { padding: 16px; }
+  .bk-library-pane .lc-filters { grid-template-columns: 1fr 1fr; }
+  .bk-library-pane .bk-table { min-width: 720px; } /* scroll on narrow */
+}
+
+:root[data-theme="dark"] body.bk-active .top,
+:root[data-theme="dark"] body.bk-active .bottom { background: #16181d; }
+:root[data-theme="dark"] body.bk-active .tab { color: #a8adb6; }
+:root[data-theme="dark"] body.bk-active .buckets-tab[aria-selected="true"] { color: #f2f3f5; }
+:root[data-theme="dark"] body.bk-active .key-btn { color: #a8adb6; }
 :root[data-theme="dark"] .bk-progress { background: #2a2d33; }
 :root[data-theme="dark"] .bk-progress-label { color: #e8e8ea; }
 :root[data-theme="dark"] .bk-status-not_started { background: #2a2d33; color: #c0c3c8; border-color: #444850; }
@@ -68,13 +170,4 @@ body.bk-library .buckets-tab { color: var(--fg); font-weight: 600; }
 :root[data-theme="dark"] .bk-detail,
 :root[data-theme="dark"] .bk-check { border-top-color: #3a3d44; }
 :root[data-theme="dark"] .bk-q { background: #1c1e22; border-color: #3a3d44; }
-
-/* Buckets table: keep columns reachable; hint scroll */
-.bk-library-pane .lc-table-wrap {
-  border: 1px solid #dedfe2;
-  border-radius: 4px;
-}
-.bk-library-pane .bk-table { min-width: 960px; }
-.bk-library-pane .bk-table th:last-child,
-.bk-library-pane .bk-table td:last-child { min-width: 220px; }
-body.bk-library #bk-library { display: block; width: 100%; max-width: 100%; padding: 12px 18px 48px; box-sizing: border-box; }
+:root[data-theme="dark"] .bk-library-pane .lc-table-wrap { border-color: #3a3d44; }
