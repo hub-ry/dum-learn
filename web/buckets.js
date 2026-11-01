@@ -224,13 +224,24 @@ function renderDetail() {
     h("h3", {}, "Tasks"),
     taskList,
   );
+  detail.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
 function renderCheck() {
   const c = state.check;
   checkPane.hidden = !c;
   if (!c) { checkPane.replaceChildren(); return; }
-  const fields = c.questions.map((q) => {
+  const questions = Array.isArray(c.questions) ? c.questions : [];
+  if (!questions.length) {
+    checkPane.replaceChildren(
+      h("header", { class: "lc-header" },
+        h("h2", {}, "Check"),
+        h("div", { class: "lc-actions" }, button("Cancel", () => { state.check = null; render(); }))),
+      h("p", { class: "lc-muted" }, "No questions on this check yet. Try Check again."),
+    );
+    return;
+  }
+  const fields = questions.map((q) => {
     const ta = h("textarea", {
       rows: 3,
       placeholder: "Your answer…",
@@ -253,6 +264,7 @@ function renderCheck() {
     ...fields,
     notice.cloneNode(true),
   );
+  checkPane.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
 function render() {
@@ -384,7 +396,7 @@ async function gradeCheck() {
   const c = state.check;
   if (!c) return;
   notice.textContent = "Grading…";
-  const answers = c.questions.map((q) => state.answers[q.id] || "");
+  const answers = (c.questions || []).map((q) => state.answers[q.id] || "");
   try {
     const data = await api("POST", `/api/buckets/checks/${c.id}/grade`, { answers });
     state.check = null;
@@ -433,7 +445,8 @@ function hide() {
 }
 function showCheck(check) {
   show();
-  state.check = check;
+  const c = check?.check && !check.questions ? check.check : check;
+  state.check = c && (c.questions || c.id) ? c : null;
   state.answers = {};
   render();
 }

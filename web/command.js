@@ -106,13 +106,14 @@ async function apply(r) {
     window.learnStudy?.refresh?.();
     window.learnBuckets?.refresh?.();
   }
-  if (r.buckets || r.check) window.learnBuckets?.refresh?.();
+  if (r.buckets && !r.check) await window.learnBuckets?.refresh?.();
   if (r.bucketOpen != null) {
     close();
     window.learnBuckets?.show?.(typeof r.bucketOpen === "string" ? { focusName: r.bucketOpen } : undefined);
   }
   if (r.check) {
     close();
+    // Full check object from the command response — do not refresh first (race clears pane).
     window.learnBuckets?.showCheck?.(r.check);
   }
   if (r.open) { close(); window.learnApp?.openPath(r.open.tab, r.open.path); }

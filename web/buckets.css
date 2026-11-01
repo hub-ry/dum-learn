@@ -68,3 +68,13 @@ body.bk-library .buckets-tab { color: var(--fg); font-weight: 600; }
 :root[data-theme="dark"] .bk-detail,
 :root[data-theme="dark"] .bk-check { border-top-color: #3a3d44; }
 :root[data-theme="dark"] .bk-q { background: #1c1e22; border-color: #3a3d44; }
+
+/* Buckets table: keep columns reachable; hint scroll */
+.bk-library-pane .lc-table-wrap {
+  border: 1px solid #dedfe2;
+  border-radius: 4px;
+}
+.bk-library-pane .bk-table { min-width: 960px; }
+.bk-library-pane .bk-table th:last-child,
+.bk-library-pane .bk-table td:last-child { min-width: 220px; }
+body.bk-library #bk-library { display: block; width: 100%; max-width: 100%; padding: 12px 18px 48px; box-sizing: border-box; }
