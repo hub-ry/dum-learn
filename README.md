@@ -58,7 +58,7 @@ branch to what it builds on, or ask how the idea came to be.
   rely on.
 - **Time bar chart.** See time spent learning, by topic or by week. Nothing
   else: no streaks and no quizzes.
-- **Light and dark** themes (`T`). PDFs are never inverted unless you press `i`.
+- **Clean dashboard UI.** System sans-serif chrome (same look as a problem-database tab), light by default, with a calm blue accent for active tabs, selection, and primary actions. Dark mode (`T`) keeps the same layout with good contrast. PDFs are never inverted unless you press `i`.
 - Reading is public and read-only. Chat, learn, and commands sit behind a
   passcode. The API key stays on the server, and there are daily caps and
   per-minute rate limits.
