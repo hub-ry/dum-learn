@@ -1,4 +1,4 @@
-// Learning buckets: map of topics the learner has to learn (Ishaan-style), with
+// Learning buckets: map of topics Ryan has to learn (Ishaan-style), with
  // subtopic status, unknowns, tasks, and links to leetcode tags / folders.
  // Stored under LEARN_DATA (mode 600); API is passcode-gated like leetcode.
 import { readFile, writeFile, rename, chmod, access } from "node:fs/promises";
@@ -96,6 +96,7 @@ export async function createBucketsLibrary({
     const tags = Array.isArray(input.tags) ? input.tags.map((t) => text(String(t), "tag", 80, true)).filter(Boolean) : [];
     const linkTags = Array.isArray(input.linkTags) ? input.linkTags.map((t) => text(String(t), "linkTag", 80, true)) : [...tags];
     const linkFolders = Array.isArray(input.linkFolders) ? input.linkFolders.map((t) => text(String(t), "folder", 120, true)) : [];
+    const problems = normalizeProblems(input.problems);
     return {
       id: id(8),
       name,
@@ -105,6 +106,7 @@ export async function createBucketsLibrary({
       tags,
       linkTags,
       linkFolders,
+      problems,
       status: "not_started", // aggregate derived on read; never guess mastery at seed
       focus: false,
       subtopics,
@@ -114,6 +116,29 @@ export async function createBucketsLibrary({
       created: now(),
       updated: now(),
     };
+  }
+
+  function normalizeProblems(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const p of list) {
+      if (!p || typeof p !== "object") continue;
+      const slug = text(String(p.slug ?? p.id ?? ""), "problem slug", 120).replace(/^\d+-/, "") || slugify(String(p.name ?? p.title ?? ""));
+      const name = text(String(p.name ?? p.title ?? slug), "problem name", 160, true);
+      if (!name) continue;
+      const url = text(String(p.url ?? (slug ? `https://leetcode.com/problems/${slug}/` : "")), "problem url", 300);
+      const key = (slug || name).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        name,
+        slug: slug || slugify(name),
+        url: url || `https://leetcode.com/problems/${slugify(name)}/`,
+        subtopics: Array.isArray(p.subtopics) ? p.subtopics.map((s) => text(String(s), "problem subtopic", 120, true)).filter(Boolean) : [],
+      });
+    }
+    return out;
   }
 
   let state = emptyState();
@@ -144,6 +169,8 @@ export async function createBucketsLibrary({
         unknowns: b.unknowns.map((u) => ({ id: u.id, text: u.text, created: u.created })),
         tasks: b.tasks.map((t) => ({ id: t.id, text: t.text, done: !!t.done })),
         progress: progressOf(b),
+        solvedCount: Array.isArray(b.problems) ? b.problems.length : 0,
+        problems: Array.isArray(b.problems) ? b.problems.map((p) => ({ name: p.name, slug: p.slug, url: p.url, subtopics: p.subtopics || [] })) : [],
       })),
     };
   }
@@ -189,7 +216,8 @@ export async function createBucketsLibrary({
     if (ss.every((s) => s === "solid")) return "solid";
     if (ss.every((s) => s === "unverified")) return "unverified";
     if (ss.every((s) => s === "not_started" || s === "unverified")) {
-      return ss.some((s) => s === "not_started") ? "not_started" : "unverified";
+      // Any touched (unverified) subtopic means the bucket is unverified overall.
+      return ss.some((s) => s === "unverified") ? "unverified" : "not_started";
     }
     if (ss.some((s) => s === "shaky")) return "shaky";
     if (ss.some((s) => s === "learning" || s === "solid")) return "learning";
@@ -213,15 +241,17 @@ export async function createBucketsLibrary({
   }
 
   async function countsFor(bucket) {
-    let problems = 0;
+    let problems = Array.isArray(bucket.problems) ? bucket.problems.length : 0;
     let explainers = 0;
     let folders = 0;
     let materials = 0;
     try {
-      const lc = await leetcodeSnapshot();
-      const tagSet = new Set((bucket.linkTags || []).map((t) => t.toLowerCase()));
-      if (tagSet.size) {
-        problems = (lc.problems || []).filter((p) => (p.tags || []).some((t) => tagSet.has(String(t).toLowerCase()))).length;
+      if (!problems) {
+        const lc = await leetcodeSnapshot();
+        const tagSet = new Set((bucket.linkTags || []).map((t) => t.toLowerCase()));
+        if (tagSet.size) {
+          problems = (lc.problems || []).filter((p) => (p.tags || []).some((t) => tagSet.has(String(t).toLowerCase()))).length;
+        }
       }
     } catch {}
     try {

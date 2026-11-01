@@ -148,8 +148,9 @@ function renderResults() {
     const open = button(b.name + (b.focus ? " ★" : ""), () => { state.selected = b; state.check = null; render(); });
     open.classList.add("lc-text-button");
     const links = b.links || {};
+    const solved = Array.isArray(b.problems) ? b.problems.length : 0;
     const linkText = [
-      links.problems ? `${links.problems} LC` : null,
+      solved ? `${solved} solved` : (links.problems ? `${links.problems} LC` : null),
       links.explainers ? `${links.explainers} AI` : null,
       links.materials ? `${links.materials} files` : null,
     ].filter(Boolean).join(" · ") || "—";
@@ -214,6 +215,15 @@ function renderDetail() {
         button("Cross-check", () => authorized(() => startCheck(b, "crosscheck")), true))),
     h("p", { class: "lc-muted" }, b.description || ""),
     progressBar(b.progress?.percent ?? 0),
+    b.problems?.length
+      ? h("section", { class: "bk-solved" },
+          h("h3", {}, `Solved (${b.problems.length}) — cold re-solve candidates`),
+          h("ul", { class: "bk-solved-list" },
+            ...b.problems.map((p) => h("li", {},
+              h("a", { href: p.url, target: "_blank", rel: "noopener noreferrer" }, p.name),
+              p.subtopics?.length ? h("span", { class: "lc-muted" }, ` · ${p.subtopics.join(", ")}`) : null,
+            ))))
+      : h("p", { class: "lc-muted" }, "No solved problems linked yet."),
     h("h3", {}, "Subtopics"),
     h("div", { class: "lc-table-wrap" },
       h("table", { class: "lc-table" },

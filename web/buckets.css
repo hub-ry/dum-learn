@@ -178,3 +178,11 @@ body.bk-active .mode, body.bk-active .mode.view, body.bk-active .mode.study {
 :root[data-theme="dark"] .bk-check { border-top-color: #3a3d44; }
 :root[data-theme="dark"] .bk-q { background: #1c1e22; border-color: #3a3d44; }
 :root[data-theme="dark"] .bk-library-pane .lc-table-wrap { border-color: #3a3d44; }
+
+.bk-solved { margin: 16px 0 8px; }
+.bk-solved-list { margin: 0; padding-left: 1.2em; columns: 2; column-gap: 24px; }
+.bk-solved-list li { margin: 6px 0; break-inside: avoid; overflow-wrap: anywhere; }
+.bk-solved-list a { color: var(--accent, #2f5bd3); font-weight: 600; text-decoration: none; }
+.bk-solved-list a:hover { text-decoration: underline; }
+@media (max-width: 900px) { .bk-solved-list { columns: 1; } }
+:root[data-theme="dark"] .bk-solved-list a { color: #9ec0ff; }
